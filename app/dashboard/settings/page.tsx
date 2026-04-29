@@ -24,14 +24,17 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   
   const [profileData, setProfileData] = useState({
-    name: user ? `${user.first_name} ${user.last_name}`.trim() : "",
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
     email: user?.email || "",
     phone: user?.phone || "",
     specialization: user?.specialization || "",
+    username: user?.username || "",
   })
-
+  console.log(profileData, "asdasdasasdasd");
+  
   const [clinicData, setClinicData] = useState({
-    clinicName: "MedCare Clinic",
+    clinicName: "E Bio Cares Clinic",
     address: "123 Medical Plaza, Healthcare District",
     city: "New Delhi",
     phone: "+91 11 2345 6789",
@@ -123,23 +126,45 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-6 mb-6">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl font-bold">
-                  {profileData.name.charAt(0) || "D"}
+                  {profileData.first_name.charAt(0) || "D"}
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium">{profileData.name || "Doctor"}</h3>
+                  <h3 className="text-lg font-medium">{`${profileData.first_name} ${profileData.last_name}`}</h3>
                   <p className="text-muted-foreground">{profileData.specialization}</p>
+                  <p className="text-sm text-muted-foreground">@{profileData.username}</p>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Full Name</label>
+                  <label className="text-sm font-medium">First Name</label>
                   <Input
-                    value={profileData.name}
+                    value={profileData.first_name}
                     onChange={(e) =>
-                      setProfileData({ ...profileData, name: e.target.value })
+                      setProfileData({ ...profileData, first_name: e.target.value })
                     }
-                    placeholder="Dr. Name"
+                    placeholder="First name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Last Name</label>
+                  <Input
+                    value={profileData.last_name}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, last_name: e.target.value })
+                    }
+                    placeholder="Last name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Username</label>
+                  <Input
+                    value={profileData.username}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, username: e.target.value })
+                    }
+                    placeholder="Username"
+                    disabled
                   />
                 </div>
                 <div className="space-y-2">

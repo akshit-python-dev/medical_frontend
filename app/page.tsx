@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Stethoscope, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -51,12 +52,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary mb-4">
-            <Stethoscope className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">MedCare</h1>
-          <p className="text-muted-foreground mt-1">Doctor CRM System</p>
+        <div className="flex flex-col items-center mb-1">
+        <div className="relative h-60 w-100 mb-1">
+          <Image
+            src="/login-logo.png"
+            alt="E Bio Cares Logo"
+            fill
+            className="object-contain"
+          />
+        </div>
         </div>
 
         {/* Login Card */}
@@ -143,7 +147,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-sm text-muted-foreground mt-6">
-          MedCare CRM - Secure Healthcare Management
+        E Bio Cares CRM - Secure Healthcare Management
         </p>
       </div>
     </div>

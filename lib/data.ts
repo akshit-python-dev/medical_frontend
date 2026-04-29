@@ -1,91 +1,74 @@
 export interface Patient {
-  id: string
-  name: string
-  fatherName: string
-  age: number
-  gender: "Male" | "Female" | "Other"
-  weight: number
-  contact: string
+  id: number
+  first_name: string
+  last_name: string
   email: string
+  phone: string
+  date_of_birth: string
+  gender: "M" | "F" | "O"
   address: string
-  place: string
-  diseaseHistory: string[]
-  createdAt: string
-  lastVisit: string
-  status: "Active" | "Inactive"
+  medical_history: string
+  age?: number
+  created_at: string
+  updated_at: string
 }
 
 export interface Appointment {
-  id: string
-  patientId: string
-  patientName: string
-  date: string
-  time: string
-  type: string
-  status: "Scheduled" | "Completed" | "Cancelled"
+  id: number
+  patient: number | Patient
+  patient_name: string
+  doctor: number
+  appointment_date: string
+  status: "scheduled" | "completed" | "cancelled"
+  reason: string
   notes?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface MedicalReport {
-  id: string
-  patientId: string
-  patientName: string
-  fatherName: string
-  place: string
-  date: string
-  age: number
-  gender: string
-  weight: number
-  temperature: number
-  bp: string
-  pulse: number
-  diagnosis: string
-  sugarLevel: number
-  cerebralFluidShrink: boolean
-  cerebralFluidExpand: boolean
-  conditions: {
-    autism: boolean
-    adhd: boolean
-    speechDisorder: boolean
-    hyperactive: boolean
-    sleepProblem: boolean
-    concentration: boolean
-    movementIssues: boolean
-    upperLimb: boolean
-    lowerLimb: boolean
-  }
-  doctorNotes: string
-  uploadedReports: string[]
+  id: number
+  patient: number | Patient
+  report_type: string
+  title: string
+  file?: string
+  file_url?: string
+  description?: string
+  created_at: string
 }
 
 export interface Medicine {
   id: string
-  name: string
+  medication_name: string
   dosage: string
-  morning: boolean
-  afternoon: boolean
-  night: boolean
-  duration: number
-  instructions: string
+  frequency: string
+  duration: string
 }
 
 export interface Prescription {
-  id: string
-  patientId: string
-  patientName: string
-  date: string
-  medicines: Medicine[]
-  notes: string
+  id: number
+  patient: number | Patient
+  patient_name?: string
+  medication_name: string
+  dosage: string
+  frequency: string
+  duration: string
+  instructions: string
+  notes?: string
+  created_at: string
 }
 
 export interface Invoice {
-  id: string
-  patientId: string
-  patientName: string
-  date: string
-  items: { description: string; amount: number }[]
-  total: number
-  status: "Paid" | "Pending" | "Overdue"
+  id: number
+  patient: number | Patient
+  patient_name: string
+  amount: number
+  status: "pending" | "paid" | "overdue" | "cancelled"
+  description: string
+  invoice_date: string
+  due_date: string
+  payment_date?: string | null
+  created_at: string
 }
 
 export interface Notification {
@@ -99,326 +82,274 @@ export interface Notification {
 
 export const patients: Patient[] = [
   {
-    id: "P001",
-    name: "Rahul Sharma",
-    fatherName: "Vijay Sharma",
-    age: 32,
-    gender: "Male",
-    weight: 72,
-    contact: "+91 98765 43210",
+    id: 1,
+    first_name: "Rahul",
+    last_name: "Sharma",
     email: "rahul.sharma@email.com",
-    address: "123, MG Road, Sector 15",
-    place: "New Delhi",
-    diseaseHistory: ["Hypertension", "Diabetes Type 2"],
-    createdAt: "2024-01-15",
-    lastVisit: "2024-03-20",
-    status: "Active",
+    phone: "+91 98765 43210",
+    date_of_birth: "1992-03-15",
+    gender: "M",
+    address: "123 MG Road, Sector 15, New Delhi",
+    medical_history: "Hypertension, Diabetes Type 2",
+    age: 32,
+    created_at: "2024-01-15T10:00:00Z",
+    updated_at: "2024-03-20T15:30:00Z",
   },
   {
-    id: "P002",
-    name: "Priya Patel",
-    fatherName: "Rajesh Patel",
-    age: 28,
-    gender: "Female",
-    weight: 58,
-    contact: "+91 87654 32109",
+    id: 2,
+    first_name: "Priya",
+    last_name: "Patel",
     email: "priya.patel@email.com",
-    address: "45, Green Avenue, Andheri West",
-    place: "Mumbai",
-    diseaseHistory: ["Asthma", "Allergies"],
-    createdAt: "2024-02-10",
-    lastVisit: "2024-03-18",
-    status: "Active",
+    phone: "+91 87654 32109",
+    date_of_birth: "1996-07-22",
+    gender: "F",
+    address: "45 Green Avenue, Andheri West, Mumbai",
+    medical_history: "Asthma, Allergies",
+    age: 28,
+    created_at: "2024-02-10T09:15:00Z",
+    updated_at: "2024-03-18T14:45:00Z",
   },
   {
-    id: "P003",
-    name: "Amit Kumar",
-    fatherName: "Suresh Kumar",
-    age: 45,
-    gender: "Male",
-    weight: 85,
-    contact: "+91 76543 21098",
+    id: 3,
+    first_name: "Amit",
+    last_name: "Kumar",
     email: "amit.kumar@email.com",
-    address: "78, Lake View, Koramangala",
-    place: "Bangalore",
-    diseaseHistory: ["Cardiac Issues", "High Cholesterol"],
-    createdAt: "2023-11-20",
-    lastVisit: "2024-03-15",
-    status: "Active",
+    phone: "+91 76543 21098",
+    date_of_birth: "1979-05-10",
+    gender: "M",
+    address: "78 Lake View, Koramangala, Bangalore",
+    medical_history: "Cardiac Issues, High Cholesterol",
+    age: 45,
+    created_at: "2023-11-20T11:00:00Z",
+    updated_at: "2024-03-15T16:20:00Z",
   },
   {
-    id: "P004",
-    name: "Sneha Reddy",
-    fatherName: "Krishna Reddy",
+    id: 4,
+    first_name: "Sneha",
+    last_name: "Reddy",
+    email: "sneha.reddy@email.com",
+    phone: "+91 65432 10987",
+    date_of_birth: "2016-02-14",
+    gender: "F",
+    address: "12 Hill Road, Banjara Hills, Hyderabad",
+    medical_history: "ADHD, Speech Delay",
     age: 8,
-    gender: "Female",
-    weight: 25,
-    contact: "+91 65432 10987",
-    email: "krishna.reddy@email.com",
-    address: "12, Hill Road, Banjara Hills",
-    place: "Hyderabad",
-    diseaseHistory: ["ADHD", "Speech Delay"],
-    createdAt: "2024-01-05",
-    lastVisit: "2024-03-22",
-    status: "Active",
+    created_at: "2024-01-05T08:30:00Z",
+    updated_at: "2024-03-22T17:00:00Z",
   },
   {
-    id: "P005",
-    name: "Mohammed Ali",
-    fatherName: "Abdul Ali",
-    age: 55,
-    gender: "Male",
-    weight: 78,
-    contact: "+91 54321 09876",
+    id: 5,
+    first_name: "Mohammed",
+    last_name: "Ali",
     email: "mohammed.ali@email.com",
-    address: "90, Park Street",
-    place: "Kolkata",
-    diseaseHistory: ["Arthritis", "Diabetes Type 2"],
-    createdAt: "2023-09-12",
-    lastVisit: "2024-03-10",
-    status: "Inactive",
+    phone: "+91 54321 09876",
+    date_of_birth: "1969-08-30",
+    gender: "M",
+    address: "90 Park Street, Kolkata",
+    medical_history: "Arthritis, Diabetes Type 2",
+    age: 55,
+    created_at: "2023-09-12T13:45:00Z",
+    updated_at: "2024-03-10T10:15:00Z",
   },
   {
-    id: "P006",
-    name: "Ananya Singh",
-    fatherName: "Rakesh Singh",
+    id: 6,
+    first_name: "Ananya",
+    last_name: "Singh",
+    email: "ananya.singh@email.com",
+    phone: "+91 43210 98765",
+    date_of_birth: "2012-06-18",
+    gender: "F",
+    address: "56 Civil Lines, Lucknow",
+    medical_history: "Autism Spectrum Disorder",
     age: 12,
-    gender: "Female",
-    weight: 35,
-    contact: "+91 43210 98765",
-    email: "rakesh.singh@email.com",
-    address: "56, Civil Lines",
-    place: "Lucknow",
-    diseaseHistory: ["Autism Spectrum"],
-    createdAt: "2024-02-28",
-    lastVisit: "2024-03-25",
-    status: "Active",
+    created_at: "2024-02-28T12:00:00Z",
+    updated_at: "2024-03-25T15:30:00Z",
   },
 ]
 
 export const appointments: Appointment[] = [
   {
-    id: "A001",
-    patientId: "P001",
-    patientName: "Rahul Sharma",
-    date: "2024-03-27",
-    time: "09:00",
-    type: "Follow-up",
-    status: "Scheduled",
+    id: 1,
+    patient: 1,
+    patient_name: "Rahul Sharma",
+    doctor: 1,
+    appointment_date: "2024-03-27T09:00:00Z",
+    status: "scheduled",
+    reason: "Follow-up",
+    notes: "Regular checkup",
+    created_at: "2024-03-26T10:00:00Z",
+    updated_at: "2024-03-26T10:00:00Z",
   },
   {
-    id: "A002",
-    patientId: "P002",
-    patientName: "Priya Patel",
-    date: "2024-03-27",
-    time: "10:30",
-    type: "Consultation",
-    status: "Scheduled",
+    id: 2,
+    patient: 2,
+    patient_name: "Priya Patel",
+    doctor: 1,
+    appointment_date: "2024-03-27T10:30:00Z",
+    status: "scheduled",
+    reason: "Consultation",
+    notes: "Asthma review",
+    created_at: "2024-03-26T10:15:00Z",
+    updated_at: "2024-03-26T10:15:00Z",
   },
   {
-    id: "A003",
-    patientId: "P004",
-    patientName: "Sneha Reddy",
-    date: "2024-03-27",
-    time: "14:00",
-    type: "Therapy Session",
-    status: "Scheduled",
+    id: 3,
+    patient: 4,
+    patient_name: "Sneha Reddy",
+    doctor: 1,
+    appointment_date: "2024-03-27T14:00:00Z",
+    status: "scheduled",
+    reason: "Therapy Session",
+    notes: "Speech therapy",
+    created_at: "2024-03-26T11:00:00Z",
+    updated_at: "2024-03-26T11:00:00Z",
   },
   {
-    id: "A004",
-    patientId: "P003",
-    patientName: "Amit Kumar",
-    date: "2024-03-26",
-    time: "11:00",
-    type: "Check-up",
-    status: "Completed",
+    id: 4,
+    patient: 3,
+    patient_name: "Amit Kumar",
+    doctor: 1,
+    appointment_date: "2024-03-26T11:00:00Z",
+    status: "completed",
+    reason: "Check-up",
+    notes: "Cardiac check",
+    created_at: "2024-03-25T09:00:00Z",
+    updated_at: "2024-03-26T11:30:00Z",
   },
   {
-    id: "A005",
-    patientId: "P006",
-    patientName: "Ananya Singh",
-    date: "2024-03-28",
-    time: "15:30",
-    type: "Evaluation",
-    status: "Scheduled",
+    id: 5,
+    patient: 6,
+    patient_name: "Ananya Singh",
+    doctor: 1,
+    appointment_date: "2024-03-28T15:30:00Z",
+    status: "scheduled",
+    reason: "Evaluation",
+    notes: "ASD evaluation",
+    created_at: "2024-03-26T12:00:00Z",
+    updated_at: "2024-03-26T12:00:00Z",
   },
   {
-    id: "A006",
-    patientId: "P005",
-    patientName: "Mohammed Ali",
-    date: "2024-03-25",
-    time: "16:00",
-    type: "Follow-up",
-    status: "Cancelled",
+    id: 6,
+    patient: 5,
+    patient_name: "Mohammed Ali",
+    doctor: 1,
+    appointment_date: "2024-03-25T16:00:00Z",
+    status: "cancelled",
+    reason: "Follow-up",
+    notes: "Patient requested cancellation",
+    created_at: "2024-03-24T14:00:00Z",
+    updated_at: "2024-03-25T09:00:00Z",
   },
 ]
 
 export const medicalReports: MedicalReport[] = [
   {
-    id: "R001",
-    patientId: "P004",
-    patientName: "Sneha Reddy",
-    fatherName: "Krishna Reddy",
-    place: "Hyderabad",
-    date: "2024-03-22",
-    age: 8,
-    gender: "Female",
-    weight: 25,
-    temperature: 98.6,
-    bp: "100/70",
-    pulse: 88,
-    diagnosis: "ADHD with Speech Delay",
-    sugarLevel: 95,
-    cerebralFluidShrink: false,
-    cerebralFluidExpand: false,
-    conditions: {
-      autism: false,
-      adhd: true,
-      speechDisorder: true,
-      hyperactive: true,
-      sleepProblem: false,
-      concentration: true,
-      movementIssues: false,
-      upperLimb: false,
-      lowerLimb: false,
-    },
-    doctorNotes: "Patient shows improvement in speech therapy. Continue current medication and therapy sessions.",
-    uploadedReports: ["speech_assessment.pdf", "eeg_report.pdf"],
+    id: 1,
+    patient: 4,
+    report_type: "lab_test",
+    title: "ADHD Assessment Report",
+    description: "Comprehensive ADHD evaluation with speech assessment",
+    file_url: "speech_assessment.pdf",
+    created_at: "2024-03-22T14:00:00Z",
   },
   {
-    id: "R002",
-    patientId: "P006",
-    patientName: "Ananya Singh",
-    fatherName: "Rakesh Singh",
-    place: "Lucknow",
-    date: "2024-03-25",
-    age: 12,
-    gender: "Female",
-    weight: 35,
-    temperature: 98.4,
-    bp: "105/68",
-    pulse: 82,
-    diagnosis: "Autism Spectrum Disorder - Mild",
-    sugarLevel: 88,
-    cerebralFluidShrink: false,
-    cerebralFluidExpand: false,
-    conditions: {
-      autism: true,
-      adhd: false,
-      speechDisorder: false,
-      hyperactive: false,
-      sleepProblem: true,
-      concentration: true,
-      movementIssues: false,
-      upperLimb: false,
-      lowerLimb: false,
-    },
-    doctorNotes: "Behavioral therapy showing positive results. Recommend continuing occupational therapy.",
-    uploadedReports: ["behavioral_assessment.pdf"],
+    id: 2,
+    patient: 6,
+    report_type: "lab_test",
+    title: "Autism Spectrum Disorder Evaluation",
+    description: "Behavioral and cognitive assessment for ASD",
+    file_url: "behavioral_assessment.pdf",
+    created_at: "2024-03-25T13:30:00Z",
   },
 ]
 
 export const prescriptions: Prescription[] = [
   {
-    id: "PR001",
-    patientId: "P001",
-    patientName: "Rahul Sharma",
-    date: "2024-03-20",
-    medicines: [
-      {
-        id: "M001",
-        name: "Metformin",
-        dosage: "500mg",
-        morning: true,
-        afternoon: false,
-        night: true,
-        duration: 30,
-        instructions: "Take after meals",
-      },
-      {
-        id: "M002",
-        name: "Amlodipine",
-        dosage: "5mg",
-        morning: true,
-        afternoon: false,
-        night: false,
-        duration: 30,
-        instructions: "Take before breakfast",
-      },
-    ],
+    id: 1,
+    patient: 1,
+    patient_name: "Rahul Sharma",
+    medication_name: "Metformin",
+    dosage: "500mg",
+    frequency: "Twice daily (Morning & Night)",
+    duration: "30 days",
+    instructions: "Take after meals with water",
     notes: "Monitor blood sugar levels weekly. Follow low-sodium diet.",
+    created_at: "2024-03-20T10:00:00Z",
   },
   {
-    id: "PR002",
-    patientId: "P004",
-    patientName: "Sneha Reddy",
-    date: "2024-03-22",
-    medicines: [
-      {
-        id: "M003",
-        name: "Methylphenidate",
-        dosage: "10mg",
-        morning: true,
-        afternoon: false,
-        night: false,
-        duration: 30,
-        instructions: "Take with breakfast",
-      },
-    ],
+    id: 2,
+    patient: 1,
+    patient_name: "Rahul Sharma",
+    medication_name: "Amlodipine",
+    dosage: "5mg",
+    frequency: "Once daily",
+    duration: "30 days",
+    instructions: "Take before breakfast",
+    notes: "For hypertension management",
+    created_at: "2024-03-20T10:00:00Z",
+  },
+  {
+    id: 3,
+    patient: 4,
+    patient_name: "Sneha Reddy",
+    medication_name: "Methylphenidate",
+    dosage: "10mg",
+    frequency: "Once daily",
+    duration: "30 days",
+    instructions: "Take with breakfast",
     notes: "Continue speech therapy sessions twice a week.",
+    created_at: "2024-03-22T11:00:00Z",
   },
 ]
 
 export const invoices: Invoice[] = [
   {
-    id: "INV001",
-    patientId: "P001",
-    patientName: "Rahul Sharma",
-    date: "2024-03-20",
-    items: [
-      { description: "Consultation Fee", amount: 500 },
-      { description: "Blood Tests", amount: 1200 },
-      { description: "ECG", amount: 800 },
-    ],
-    total: 2500,
-    status: "Paid",
+    id: 1,
+    patient: 1,
+    patient_name: "Rahul Sharma",
+    amount: 2500,
+    status: "paid",
+    description: "Consultation Fee, Blood Tests, ECG",
+    invoice_date: "2024-03-20T10:00:00Z",
+    due_date: "2024-04-03",
+    payment_date: "2024-03-25",
+    created_at: "2024-03-20T10:00:00Z",
   },
   {
-    id: "INV002",
-    patientId: "P004",
-    patientName: "Sneha Reddy",
-    date: "2024-03-22",
-    items: [
-      { description: "Consultation Fee", amount: 500 },
-      { description: "Therapy Session", amount: 1500 },
-      { description: "Assessment Report", amount: 2000 },
-    ],
-    total: 4000,
-    status: "Pending",
+    id: 2,
+    patient: 4,
+    patient_name: "Sneha Reddy",
+    amount: 4000,
+    status: "pending",
+    description: "Consultation Fee, Therapy Session, Assessment Report",
+    invoice_date: "2024-03-22T11:00:00Z",
+    due_date: "2024-04-05",
+    payment_date: null,
+    created_at: "2024-03-22T11:00:00Z",
   },
   {
-    id: "INV003",
-    patientId: "P003",
-    patientName: "Amit Kumar",
-    date: "2024-03-15",
-    items: [
-      { description: "Consultation Fee", amount: 500 },
-      { description: "Cardiac Tests", amount: 3500 },
-    ],
-    total: 4000,
-    status: "Paid",
+    id: 3,
+    patient: 3,
+    patient_name: "Amit Kumar",
+    amount: 4000,
+    status: "paid",
+    description: "Consultation Fee, Cardiac Tests",
+    invoice_date: "2024-03-15T14:00:00Z",
+    due_date: "2024-03-29",
+    payment_date: "2024-03-28",
+    created_at: "2024-03-15T14:00:00Z",
   },
   {
-    id: "INV004",
-    patientId: "P005",
-    patientName: "Mohammed Ali",
-    date: "2024-02-28",
-    items: [
-      { description: "Consultation Fee", amount: 500 },
-      { description: "X-Ray", amount: 1000 },
-    ],
-    total: 1500,
-    status: "Overdue",
+    id: 4,
+    patient: 5,
+    patient_name: "Mohammed Ali",
+    amount: 1500,
+    status: "overdue",
+    description: "Consultation Fee, X-Ray",
+    invoice_date: "2024-02-28T09:00:00Z",
+    due_date: "2024-03-14",
+    payment_date: null,
+    created_at: "2024-02-28T09:00:00Z",
   },
 ]
 

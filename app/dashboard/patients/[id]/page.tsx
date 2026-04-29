@@ -1,12 +1,13 @@
 "use client"
 
-import { use } from "react"
+import { use, useEffect, useState } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { patients, appointments, medicalReports, prescriptions, invoices } from "@/lib/data"
+import { Spinner } from "@/components/ui/spinner"
+import { usePatients } from "@/hooks/usePatients"
 import {
   ArrowLeft,
   User,
@@ -27,16 +28,83 @@ interface PatientProfilePageProps {
 
 export default function PatientProfilePage({ params }: PatientProfilePageProps) {
   const { id } = use(params)
-  const patient = patients.find((p) => p.id === id)
+  const patientId = parseInt(id, 10)
+  const [patient, setPatient] = useState<any>(null)
+  const [medicalRecords, setMedicalRecords] = useState<any[]>([])
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
+  const [billingSummary, setBillingSummary] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  const { getPatient, getPatientMedicalHistory, getUpcomingAppointments, getBillingSummary } = usePatients()
+
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch patient detail (returns PatientDetailSerializer with nested data)
+        const patientData = await getPatient(patientId)
+        if (!patientData) {
+          notFound()
+        }
+        setPatient(patientData)
+
+        // Fetch medical history (MedicalRecords)
+        try {
+          const historyData = await getPatientMedicalHistory(patientId)
+          setMedicalRecords(Array.isArray(historyData) ? historyData : [])
+        } catch (err) {
+          console.error("[v0] Error fetching medical history:", err)
+        }
+
+        // Fetch upcoming appointments
+        try {
+          const appointmentsData = await getUpcomingAppointments(patientId)
+          setUpcomingAppointments(Array.isArray(appointmentsData) ? appointmentsData : [])
+        } catch (err) {
+          console.error("[v0] Error fetching upcoming appointments:", err)
+        }
+
+        // Fetch billing summary
+        try {
+          const summaryData = await getBillingSummary(patientId)
+          setBillingSummary(summaryData)
+        } catch (err) {
+          console.error("[v0] Error fetching billing summary:", err)
+        }
+      } catch (err) {
+        console.error("[v0] Error fetching patient:", err)
+        notFound()
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPatientData()
+  }, [patientId, getPatient, getPatientMedicalHistory, getUpcomingAppointments, getBillingSummary])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col items-center gap-2">
+          <Spinner className="h-8 w-8" />
+          <p className="text-muted-foreground">Loading patient details...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!patient) {
     notFound()
   }
 
-  const patientAppointments = appointments.filter((a) => a.patientId === patient.id)
-  const patientReports = medicalReports.filter((r) => r.patientId === patient.id)
-  const patientPrescriptions = prescriptions.filter((p) => p.patientId === patient.id)
-  const patientInvoices = invoices.filter((i) => i.patientId === patient.id)
+  // Extract data from patient detail response
+  const appointments = patient.appointments || []
+  const medicalReports = patient.medical_reports || []
+  const prescriptions = medicalRecords.flatMap((record: any) => record.prescriptions || [])
+  const bills = patient.bills || []
+
+  const fullName = `${patient.first_name} ${patient.last_name}`
 
   return (
     <div className="space-y-6">
@@ -64,16 +132,10 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
             {/* Avatar */}
             <div className="flex flex-col items-center">
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 text-primary text-3xl font-bold">
-                {patient.name.charAt(0)}
+                {patient.first_name.charAt(0)}
               </div>
-              <span
-                className={`mt-3 px-3 py-1 text-sm rounded-full ${
-                  patient.status === "Active"
-                    ? "bg-success/10 text-success"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {patient.status}
+              <span className="mt-3 px-3 py-1 text-sm rounded-full bg-success/10 text-success">
+                Active
               </span>
             </div>
 
@@ -84,33 +146,33 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                   <User className="h-4 w-4" />
                   <span className="text-sm">Full Name</span>
                 </div>
-                <p className="font-medium">{patient.name}</p>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm">Father&apos;s Name</span>
-                </div>
-                <p className="font-medium">{patient.fatherName}</p>
+                <p className="font-medium">{fullName}</p>
               </div>
 
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Activity className="h-4 w-4" />
-                  <span className="text-sm">Age / Gender / Weight</span>
+                  <span className="text-sm">Gender</span>
                 </div>
                 <p className="font-medium">
-                  {patient.age} yrs / {patient.gender} / {patient.weight} kg
+                  {patient.gender === "M" ? "Male" : patient.gender === "F" ? "Female" : "Other"}
                 </p>
               </div>
 
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span className="text-sm">Contact</span>
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-sm">Date of Birth</span>
                 </div>
-                <p className="font-medium">{patient.contact}</p>
+                <p className="font-medium">{patient.date_of_birth}</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  <span className="text-sm">Phone</span>
+                </div>
+                <p className="font-medium">{patient.phone}</p>
               </div>
 
               <div className="space-y-1">
@@ -126,9 +188,7 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                   <MapPin className="h-4 w-4" />
                   <span className="text-sm">Address</span>
                 </div>
-                <p className="font-medium">
-                  {patient.address}, {patient.place}
-                </p>
+                <p className="font-medium">{patient.address}</p>
               </div>
 
               <div className="space-y-1">
@@ -136,29 +196,29 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                   <Calendar className="h-4 w-4" />
                   <span className="text-sm">Patient Since</span>
                 </div>
-                <p className="font-medium">{patient.createdAt}</p>
+                <p className="font-medium">{new Date(patient.created_at).toLocaleDateString()}</p>
               </div>
 
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span className="text-sm">Last Visit</span>
+                  <span className="text-sm">Last Updated</span>
                 </div>
-                <p className="font-medium">{patient.lastVisit}</p>
+                <p className="font-medium">{new Date(patient.updated_at).toLocaleDateString()}</p>
               </div>
 
               <div className="space-y-1 sm:col-span-2 lg:col-span-1">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Activity className="h-4 w-4" />
-                  <span className="text-sm">Disease History</span>
+                  <span className="text-sm">Medical History</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {patient.diseaseHistory.map((disease, i) => (
+                  {patient.medical_history && patient.medical_history.split(",").map((history: string, i: number) => (
                     <span
                       key={i}
                       className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-full"
                     >
-                      {disease}
+                      {history.trim()}
                     </span>
                   ))}
                 </div>
@@ -198,33 +258,33 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {patientAppointments.length === 0 ? (
+              {appointments.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No appointments found
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {patientAppointments.map((appointment) => (
+                  {appointments.map((appointment: any) => (
                     <div
                       key={appointment.id}
                       className="flex items-center justify-between p-4 rounded-lg bg-secondary/50"
                     >
                       <div>
-                        <p className="font-medium">{appointment.type}</p>
+                        <p className="font-medium">{appointment.reason}</p>
                         <p className="text-sm text-muted-foreground">
-                          {appointment.date} at {appointment.time}
+                          {new Date(appointment.appointment_date).toLocaleString()}
                         </p>
                       </div>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
-                          appointment.status === "Completed"
+                          appointment.status === "completed"
                             ? "bg-success/10 text-success"
-                            : appointment.status === "Cancelled"
+                            : appointment.status === "cancelled"
                             ? "bg-destructive/10 text-destructive"
                             : "bg-primary/10 text-primary"
                         }`}
                       >
-                        {appointment.status}
+                        {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                       </span>
                     </div>
                   ))}
@@ -250,21 +310,21 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
               </Button>
             </CardHeader>
             <CardContent>
-              {patientReports.length === 0 ? (
+              {medicalReports.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No reports found
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {patientReports.map((report) => (
+                  {medicalReports.map((report: any) => (
                     <div
                       key={report.id}
                       className="flex items-center justify-between p-4 rounded-lg bg-secondary/50"
                     >
                       <div>
-                        <p className="font-medium">{report.diagnosis}</p>
+                        <p className="font-medium">{report.title}</p>
                         <p className="text-sm text-muted-foreground">
-                          {report.date}
+                          {new Date(report.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <Button variant="outline" size="sm" asChild>
@@ -289,46 +349,30 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {patientPrescriptions.length === 0 ? (
+              {prescriptions.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No prescriptions found
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {patientPrescriptions.map((prescription) => (
+                  {prescriptions.map((prescription: any) => (
                     <div
                       key={prescription.id}
                       className="p-4 rounded-lg bg-secondary/50"
                     >
                       <div className="flex items-center justify-between mb-3">
                         <p className="font-medium">
-                          Prescription #{prescription.id}
+                          {prescription.medication_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {prescription.date}
+                          {new Date(prescription.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <div className="space-y-2">
-                        {prescription.medicines.map((medicine) => (
-                          <div
-                            key={medicine.id}
-                            className="flex items-center justify-between text-sm"
-                          >
-                            <span>
-                              {medicine.name} ({medicine.dosage})
-                            </span>
-                            <span className="text-muted-foreground">
-                              {[
-                                medicine.morning && "Morning",
-                                medicine.afternoon && "Afternoon",
-                                medicine.night && "Night",
-                              ]
-                                .filter(Boolean)
-                                .join(", ")}{" "}
-                              - {medicine.duration} days
-                            </span>
-                          </div>
-                        ))}
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-muted-foreground">Dosage:</span> {prescription.dosage}</p>
+                        <p><span className="text-muted-foreground">Frequency:</span> {prescription.frequency}</p>
+                        <p><span className="text-muted-foreground">Duration:</span> {prescription.duration}</p>
+                        <p><span className="text-muted-foreground">Instructions:</span> {prescription.instructions}</p>
                       </div>
                     </div>
                   ))}
@@ -347,13 +391,13 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {patientInvoices.length === 0 ? (
+              {bills.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No invoices found
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {patientInvoices.map((invoice) => (
+                  {bills.map((invoice: any) => (
                     <div
                       key={invoice.id}
                       className="flex items-center justify-between p-4 rounded-lg bg-secondary/50"
@@ -361,23 +405,23 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                       <div>
                         <p className="font-medium">Invoice #{invoice.id}</p>
                         <p className="text-sm text-muted-foreground">
-                          {invoice.date}
+                          {new Date(invoice.invoice_date || invoice.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex items-center gap-4">
                         <p className="font-semibold">
-                          Rs. {invoice.total.toLocaleString()}
+                          ₹{Number(invoice.amount).toLocaleString()}
                         </p>
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
-                            invoice.status === "Paid"
+                            invoice.status === "paid"
                               ? "bg-success/10 text-success"
-                              : invoice.status === "Overdue"
+                              : invoice.status === "overdue"
                               ? "bg-destructive/10 text-destructive"
                               : "bg-warning/10 text-warning"
                           }`}
                         >
-                          {invoice.status}
+                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                         </span>
                       </div>
                     </div>

@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { notifications as initialNotifications, type Notification } from "@/lib/data"
 import {
   Bell,
   Calendar,
@@ -15,8 +14,17 @@ import {
   BellOff,
 } from "lucide-react"
 
+export interface Notification {
+  id: string
+  title: string
+  message: string
+  type: "appointment" | "report" | "medicine" | "billing"
+  date: string
+  read: boolean
+}
+
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -51,17 +59,17 @@ export default function NotificationsPage() {
   }
 
   const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     )
   }
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })))
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
   }
 
   const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter((n) => n.id !== id))
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
   }
 
   const clearAll = () => {
@@ -83,6 +91,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Notifications</h1>
@@ -92,6 +101,7 @@ export default function NotificationsPage() {
               : "All caught up!"}
           </p>
         </div>
+
         <div className="flex gap-2">
           {unreadCount > 0 && (
             <Button variant="outline" onClick={markAllAsRead}>
@@ -108,6 +118,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
+      {/* Empty State */}
       {notifications.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -119,6 +130,7 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
       ) : (
+        /* Notifications List */
         <Card>
           <CardHeader>
             <CardTitle>All Notifications</CardTitle>
@@ -126,10 +138,12 @@ export default function NotificationsPage() {
               {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <div className="space-y-3">
               {notifications.map((notification) => {
                 const Icon = getIcon(notification.type)
+
                 return (
                   <div
                     key={notification.id}
@@ -139,23 +153,35 @@ export default function NotificationsPage() {
                         : "bg-secondary/70 border-l-4 border-primary"
                     }`}
                   >
+                    {/* Icon */}
                     <div className={`p-2 rounded-lg ${getIconColor(notification.type)}`}>
                       <Icon className="h-5 w-5" />
                     </div>
+
+                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className={`font-medium ${!notification.read ? "text-foreground" : "text-muted-foreground"}`}>
+                          <p
+                            className={`font-medium ${
+                              !notification.read
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             {notification.title}
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
                             {notification.message}
                           </p>
                         </div>
+
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDate(notification.date)}
                         </span>
                       </div>
+
+                      {/* Actions */}
                       <div className="flex gap-2 mt-3">
                         {!notification.read && (
                           <Button
@@ -167,6 +193,7 @@ export default function NotificationsPage() {
                             Mark as Read
                           </Button>
                         )}
+
                         <Button
                           variant="ghost"
                           size="sm"

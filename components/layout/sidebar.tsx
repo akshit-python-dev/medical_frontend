@@ -17,7 +17,7 @@ import {
   Stethoscope,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
+import Image from "next/image"
 interface SidebarProps {
   isCollapsed: boolean
   onToggle: () => void
@@ -47,12 +47,25 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Stethoscope className="h-5 w-5 text-primary-foreground" />
-          </div>
-          {!isCollapsed && (
-            <span className="text-lg font-semibold">MedCare</span>
-          )}
+        {isCollapsed ? (
+    <div className="relative h-9 w-9 rounded-lg bg-primary overflow-hidden">
+      <Image
+        src="/logo.jpeg"
+        alt="Logo"
+        fill
+        className="object-cover"
+      />
+    </div>
+  ) : (
+    <div className="relative h-10 w-50 overflow-hidden">
+      <Image
+        src="/full-logo.jpeg"
+        alt="Logo"
+        fill
+        className="object-cover object-center"
+      />
+    </div>
+  )}
         </Link>
       </div>
 

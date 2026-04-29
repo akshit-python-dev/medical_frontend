@@ -2,44 +2,51 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
-interface Doctor {
-  id: string
-  name: string
+interface DoctorUser {
+  id: number
+  username: string
   email: string
-  specialization: string
-  clinicName: string
+  first_name: string
+  last_name: string
   phone: string
-  avatar?: string
+  specialization: string
+  is_doctor: boolean
+  is_active: boolean
+  date_joined: string
 }
 
 interface AuthContextType {
-  doctor: Doctor | null
+  user: DoctorUser | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
-  updateProfile: (data: Partial<Doctor>) => void
+  updateProfile: (data: Partial<DoctorUser>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const mockDoctor: Doctor = {
-  id: "D001",
-  name: "Dr. Arun Mehta",
+const mockDoctor: DoctorUser = {
+  id: 1,
+  username: "dr_arun",
   email: "dr.arun@medcare.com",
-  specialization: "Pediatric Neurology",
-  clinicName: "MedCare Clinic",
+  first_name: "Arun",
+  last_name: "Mehta",
   phone: "+91 99887 76655",
+  specialization: "Pediatric Neurology",
+  is_doctor: true,
+  is_active: true,
+  date_joined: "2024-01-01T10:00:00Z",
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [doctor, setDoctor] = useState<Doctor | null>(null)
+  const [user, setUser] = useState<DoctorUser | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
     const storedAuth = localStorage.getItem("doctor_auth")
     if (storedAuth) {
       const parsed = JSON.parse(storedAuth)
-      setDoctor(parsed)
+      setUser(parsed)
       setIsAuthenticated(true)
     }
   }, [])
@@ -48,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Mock authentication - in production, this would call an API
     if (email && password.length >= 4) {
       const doctorData = { ...mockDoctor, email }
-      setDoctor(doctorData)
+      setUser(doctorData)
       setIsAuthenticated(true)
       localStorage.setItem("doctor_auth", JSON.stringify(doctorData))
       return true
@@ -57,21 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    setDoctor(null)
+    setUser(null)
     setIsAuthenticated(false)
     localStorage.removeItem("doctor_auth")
   }
 
-  const updateProfile = (data: Partial<Doctor>) => {
-    if (doctor) {
-      const updated = { ...doctor, ...data }
-      setDoctor(updated)
+  const updateProfile = (data: Partial<DoctorUser>) => {
+    if (user) {
+      const updated = { ...user, ...data }
+      setUser(updated)
       localStorage.setItem("doctor_auth", JSON.stringify(updated))
     }
   }
 
   return (
-    <AuthContext.Provider value={{ doctor, isAuthenticated, login, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )
