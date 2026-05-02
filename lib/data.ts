@@ -2,6 +2,7 @@ export interface Patient {
   id: number
   first_name: string
   last_name: string
+  father_name: string
   email: string
   phone: string
   date_of_birth: string

@@ -1,0 +1,31 @@
+PATIENT INFORMATION REPORT
+==========================
+
+Personal Details:
+-----------------
+Name: David Davis
+Father's Name: David
+Gender: Male
+Date of Birth: 1976-03-23
+Age: 50 years
+
+Contact Information:
+-------------------
+Email: david.davis_5@example.com
+Phone: 555-3335
+Address: 748 Main St, City, State
+
+Medical Information:
+-------------------
+Medical History: Previous back injury
+
+Patient Since: 02/05/2026
+Last Updated: 02/05/2026
+
+Appointments (1):
+1. New complaint evaluation - 11/06/2026, 14:34:31 - scheduled
+
+Prescriptions (0):
+
+
+Generated on: 02/05/2026, 14:34:51

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Spinner } from "@/components/ui/spinner"
 import { usePatients } from "@/hooks/usePatients"
+import { generatePatientPDF } from "@/lib/pdf-generator"
 import {
   ArrowLeft,
   User,
@@ -20,6 +21,7 @@ import {
   CreditCard,
   Activity,
   Edit,
+  Download,
 } from "lucide-react"
 
 interface PatientProfilePageProps {
@@ -106,6 +108,15 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
 
   const fullName = `${patient.first_name} ${patient.last_name}`
 
+  const handleDownloadPatientInfo = async () => {
+    try {
+      await generatePatientPDF(patient, appointments, prescriptions)
+    } catch (error) {
+      console.error("[v0] Error generating PDF:", error)
+      alert("Failed to generate PDF. Please try again.")
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -119,10 +130,16 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
           <h1 className="text-2xl font-bold">Patient Profile</h1>
           <p className="text-muted-foreground">View and manage patient information</p>
         </div>
-        <Button>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Profile
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleDownloadPatientInfo} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+          <Button>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Profile
+          </Button>
+        </div>
       </div>
 
       {/* Patient Info Card */}
@@ -147,6 +164,14 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                   <span className="text-sm">Full Name</span>
                 </div>
                 <p className="font-medium">{fullName}</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm">Father&apos;s Name</span>
+                </div>
+                <p className="font-medium">{patient.father_name || "N/A"}</p>
               </div>
 
               <div className="space-y-1">
@@ -354,28 +379,73 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                   No prescriptions found
                 </p>
               ) : (
-                <div className="space-y-4">
-                  {prescriptions.map((prescription: any) => (
-                    <div
-                      key={prescription.id}
-                      className="p-4 rounded-lg bg-secondary/50"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="font-medium">
-                          {prescription.medication_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(prescription.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <p><span className="text-muted-foreground">Dosage:</span> {prescription.dosage}</p>
-                        <p><span className="text-muted-foreground">Frequency:</span> {prescription.frequency}</p>
-                        <p><span className="text-muted-foreground">Duration:</span> {prescription.duration}</p>
-                        <p><span className="text-muted-foreground">Instructions:</span> {prescription.instructions}</p>
+                <div className="space-y-6">
+                  {/* Medications List */}
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm">Medications List</h3>
+                    <div className="border rounded-lg p-4 bg-secondary/30">
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {prescriptions.map((prescription: any, index: number) => (
+                          <div
+                            key={prescription.id}
+                            className="flex gap-3 pb-2 border-b border-border/50 last:border-b-0"
+                          >
+                            <span className="font-semibold text-primary min-w-6 pt-0.5">{index + 1}.</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium break-words">{prescription.medication_name}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {prescription.dosage} • {prescription.frequency}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Detailed View */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm">Prescription Details</h3>
+                    {prescriptions.map((prescription: any, index: number) => (
+                      <div
+                        key={prescription.id}
+                        className="p-4 rounded-lg bg-secondary/50 border border-border"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-base">{prescription.medication_name}</p>
+                            <div className="grid gap-2 mt-3 sm:grid-cols-2">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Dosage</p>
+                                <p className="text-sm font-medium">{prescription.dosage}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Frequency</p>
+                                <p className="text-sm font-medium">{prescription.frequency}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Duration</p>
+                                <p className="text-sm font-medium">{prescription.duration}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Date Prescribed</p>
+                                <p className="text-sm font-medium">{new Date(prescription.created_at).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            {prescription.instructions && (
+                              <div className="mt-3 p-2 rounded bg-primary/5 border-l-2 border-primary">
+                                <p className="text-xs text-muted-foreground">Instructions</p>
+                                <p className="text-sm mt-1">{prescription.instructions}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>

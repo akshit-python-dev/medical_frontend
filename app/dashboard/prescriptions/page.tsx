@@ -164,8 +164,15 @@ export default function PrescriptionsPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">Medication Name *</label>
-                <Input
+                {/* <Input
                   placeholder="e.g., Aspirin, Amoxicillin"
+                  value={newPrescription.medication_name}
+                  onChange={(e) => setNewPrescription({ ...newPrescription, medication_name: e.target.value })}
+                /> */}
+                <textarea
+                  placeholder="e.g., Aspirin, Amoxicillin"
+                  className="w-full px-3 py-2 border rounded-md"
+                  rows={3}
                   value={newPrescription.medication_name}
                   onChange={(e) => setNewPrescription({ ...newPrescription, medication_name: e.target.value })}
                 />
