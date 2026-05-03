@@ -1,14 +1,27 @@
 "use client"
 
 import { use, useEffect, useState } from "react"
-import { notFound } from "next/navigation"
+import { notFound, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Spinner } from "@/components/ui/spinner"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { usePatients } from "@/hooks/usePatients"
+import { useToast } from "@/hooks/use-toast"
 import { generatePatientPDF } from "@/lib/pdf-generator"
+import { generatePrescriptionPDF } from "@/lib/prescription-pdf-generator"
+import { generateSinglePrescriptionPDF } from "@/lib/single-prescription-pdf"
 import {
   ArrowLeft,
   User,
@@ -22,6 +35,9 @@ import {
   Activity,
   Edit,
   Download,
+  Loader,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react"
 
 interface PatientProfilePageProps {
@@ -29,6 +45,8 @@ interface PatientProfilePageProps {
 }
 
 export default function PatientProfilePage({ params }: PatientProfilePageProps) {
+  const router = useRouter()
+  const { toast } = useToast()
   const { id } = use(params)
   const patientId = parseInt(id, 10)
   const [patient, setPatient] = useState<any>(null)
@@ -36,8 +54,18 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
   const [billingSummary, setBillingSummary] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editData, setEditData] = useState<any>(null)
+  const [isEditPrescriptionOpen, setIsEditPrescriptionOpen] = useState(false)
+  const [editingPrescription, setEditingPrescription] = useState<any>(null)
+  const [prescriptionFormData, setPrescriptionFormData] = useState<any>(null)
+  const [isSavingPrescription, setIsSavingPrescription] = useState(false)
+  const [downloadFromDate, setDownloadFromDate] = useState<string>('')
+  const [downloadToDate, setDownloadToDate] = useState<string>('')
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
 
-  const { getPatient, getPatientMedicalHistory, getUpcomingAppointments, getBillingSummary } = usePatients()
+  const { getPatient, getPatientMedicalHistory, getUpcomingAppointments, getBillingSummary, updatePatient } = usePatients()
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -103,7 +131,7 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
   // Extract data from patient detail response
   const appointments = patient.appointments || []
   const medicalReports = patient.medical_reports || []
-  const prescriptions = medicalRecords.flatMap((record: any) => record.prescriptions || [])
+  const prescriptions = patient.prescriptions || []
   const bills = patient.bills || []
 
   const fullName = `${patient.first_name} ${patient.last_name}`
@@ -111,9 +139,179 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
   const handleDownloadPatientInfo = async () => {
     try {
       await generatePatientPDF(patient, appointments, prescriptions)
+      toast({
+        title: "Success",
+        description: "Patient report downloaded successfully",
+        variant: "default",
+      })
     } catch (error) {
       console.error("[v0] Error generating PDF:", error)
-      alert("Failed to generate PDF. Please try again.")
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editData.first_name || !editData.last_name || !editData.email) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await updatePatient(patientId, editData)
+      setPatient({ ...patient, ...editData })
+      setIsEditDialogOpen(false)
+      toast({
+        title: "Success",
+        description: "Patient information updated successfully",
+        variant: "default",
+      })
+    } catch (error) {
+      console.error("[v0] Error updating patient:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update patient information",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleEditClick = () => {
+    setEditData({
+      first_name: patient.first_name,
+      last_name: patient.last_name,
+      email: patient.email,
+      phone: patient.phone,
+      date_of_birth: patient.date_of_birth,
+      father_name: patient.father_name,
+      gender: patient.gender,
+      address: patient.address,
+      medical_history: patient.medical_history,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditPrescription = (prescription: any) => {
+    setEditingPrescription(prescription)
+    setPrescriptionFormData({
+      medication_name: prescription.medication_name,
+      dosage: prescription.dosage,
+      frequency: prescription.frequency,
+      duration: prescription.duration,
+      instructions: prescription.instructions,
+    })
+    setIsEditPrescriptionOpen(true)
+  }
+
+  const handleSavePrescription = async () => {
+    if (!prescriptionFormData.medication_name || !prescriptionFormData.dosage) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingPrescription(true)
+    try {
+      // Call API to update prescription
+      const response = await fetch(`/api/prescriptions/${editingPrescription.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prescriptionFormData),
+      })
+      if (!response.ok) throw new Error('Failed to update')
+      
+      // Update prescription in state
+      setPatient(prev => ({
+        ...prev,
+        prescriptions: prev.prescriptions.map((p: any) =>
+          p.id === editingPrescription.id ? { ...p, ...prescriptionFormData } : p
+        ),
+      }))
+      
+      setIsEditPrescriptionOpen(false)
+      toast({
+        title: "Success",
+        description: "Prescription updated successfully",
+        variant: "default",
+      })
+    } catch (error) {
+      console.error("[v0] Error updating prescription:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update prescription",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingPrescription(false)
+    }
+  }
+
+  const handleDownloadByDate = async () => {
+    if (!downloadFromDate || !downloadToDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select both from and to dates",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const fromDate = new Date(downloadFromDate)
+    const toDate = new Date(downloadToDate)
+    
+    if (fromDate > toDate) {
+      toast({
+        title: "Validation Error",
+        description: "From date must be before to date",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const filteredPrescriptions = prescriptions.filter((presc: any) => {
+        const prescDate = new Date(presc.created_at)
+        return prescDate >= fromDate && prescDate <= toDate
+      })
+
+      if (filteredPrescriptions.length === 0) {
+        toast({
+          title: "No Prescriptions",
+          description: "No prescriptions found for the selected date range",
+          variant: "destructive",
+        })
+        return
+      }
+
+      await generatePrescriptionPDF(patient, filteredPrescriptions)
+      toast({
+        title: "Success",
+        description: `Downloaded ${filteredPrescriptions.length} prescription(s)`,
+        variant: "default",
+      })
+      setIsDateFilterOpen(false)
+      setDownloadFromDate('')
+      setDownloadToDate('')
+    } catch (error) {
+      console.error("[v0] Error downloading prescriptions:", error)
+      toast({
+        title: "Error",
+        description: "Failed to download prescriptions",
+        variant: "destructive",
+      })
     }
   }
 
@@ -135,12 +333,219 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
             <Download className="h-4 w-4 mr-2" />
             Download
           </Button>
-          <Button>
+          <Button onClick={handleEditClick}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Profile
           </Button>
         </div>
       </div>
+
+      {/* Edit Prescription Dialog */}
+      <Dialog open={isEditPrescriptionOpen} onOpenChange={setIsEditPrescriptionOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Prescription</DialogTitle>
+            <DialogDescription>Update prescription details</DialogDescription>
+          </DialogHeader>
+          {prescriptionFormData && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Medication Name *</label>
+                <Input
+                  placeholder="e.g., Aspirin"
+                  value={prescriptionFormData.medication_name}
+                  onChange={(e) =>
+                    setPrescriptionFormData({
+                      ...prescriptionFormData,
+                      medication_name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Dosage *</label>
+                  <Input
+                    placeholder="e.g., 500mg"
+                    value={prescriptionFormData.dosage}
+                    onChange={(e) =>
+                      setPrescriptionFormData({
+                        ...prescriptionFormData,
+                        dosage: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Frequency</label>
+                  <Input
+                    placeholder="e.g., Twice daily"
+                    value={prescriptionFormData.frequency}
+                    onChange={(e) =>
+                      setPrescriptionFormData({
+                        ...prescriptionFormData,
+                        frequency: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Duration</label>
+                <Input
+                  placeholder="e.g., 7 days"
+                  value={prescriptionFormData.duration}
+                  onChange={(e) =>
+                    setPrescriptionFormData({
+                      ...prescriptionFormData,
+                      duration: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Instructions</label>
+                <textarea
+                  placeholder="Special instructions"
+                  className="w-full px-3 py-2 border rounded-md"
+                  rows={3}
+                  value={prescriptionFormData.instructions}
+                  onChange={(e) =>
+                    setPrescriptionFormData({
+                      ...prescriptionFormData,
+                      instructions: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditPrescriptionOpen(false)} disabled={isSavingPrescription}>
+              Cancel
+            </Button>
+            <Button onClick={handleSavePrescription} disabled={isSavingPrescription}>
+              {isSavingPrescription ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Patient Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Patient Information</DialogTitle>
+            <DialogDescription>Update patient details</DialogDescription>
+          </DialogHeader>
+          {editData && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">First Name *</label>
+                  <Input
+                    value={editData.first_name}
+                    onChange={(e) => setEditData({ ...editData, first_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Last Name *</label>
+                  <Input
+                    value={editData.last_name}
+                    onChange={(e) => setEditData({ ...editData, last_name: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Email *</label>
+                  <Input
+                    type="email"
+                    value={editData.email}
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Phone</label>
+                  <Input
+                    value={editData.phone}
+                    onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Date of Birth</label>
+                  <Input
+                    type="date"
+                    value={editData.date_of_birth}
+                    onChange={(e) => setEditData({ ...editData, date_of_birth: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Father&apos;s Name</label>
+                  <Input
+                    value={editData.father_name}
+                    onChange={(e) => setEditData({ ...editData, father_name: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Gender</label>
+                  <select
+                    className="w-full px-3 py-2 border rounded-md"
+                    value={editData.gender}
+                    onChange={(e) => setEditData({ ...editData, gender: e.target.value })}
+                  >
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="O">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Address</label>
+                <Input
+                  value={editData.address}
+                  onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Medical History</label>
+                <textarea
+                  className="w-full px-3 py-2 border rounded-md"
+                  rows={3}
+                  value={editData.medical_history || ""}
+                  onChange={(e) => setEditData({ ...editData, medical_history: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Patient Info Card */}
       <Card>
@@ -367,11 +772,84 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
 
         <TabsContent value="prescriptions">
           <Card>
-            <CardHeader>
-              <CardTitle>Prescriptions</CardTitle>
-              <CardDescription>
-                All prescriptions issued to this patient
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Prescriptions</CardTitle>
+                <CardDescription>
+                  All prescriptions issued to this patient
+                </CardDescription>
+              </div>
+              {prescriptions.length > 0 && (
+                <div className="flex gap-2">
+                  <Dialog open={isDateFilterOpen} onOpenChange={setIsDateFilterOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Download by Date
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Download Prescriptions by Date</DialogTitle>
+                        <DialogDescription>
+                          Select a date range to download prescriptions
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">From Date</label>
+                          <Input
+                            type="date"
+                            value={downloadFromDate}
+                            onChange={(e) => setDownloadFromDate(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">To Date</label>
+                          <Input
+                            type="date"
+                            value={downloadToDate}
+                            onChange={(e) => setDownloadToDate(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDateFilterOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleDownloadByDate}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await generatePrescriptionPDF(patient, prescriptions)
+                        toast({
+                          title: "Success",
+                          description: "All prescriptions downloaded successfully",
+                          variant: "default",
+                        })
+                      } catch (error) {
+                        console.error("[v0] Error generating prescription PDF:", error)
+                        toast({
+                          title: "Error",
+                          description: "Failed to generate PDF",
+                          variant: "destructive",
+                        })
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download All
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {prescriptions.length === 0 ? (
@@ -403,44 +881,78 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                     </div>
                   </div>
 
-                  {/* Detailed View */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm">Prescription Details</h3>
+                  {/* Detailed View with Download */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm">Individual Prescriptions</h3>
                     {prescriptions.map((prescription: any, index: number) => (
                       <div
                         key={prescription.id}
-                        className="p-4 rounded-lg bg-secondary/50 border border-border"
+                        className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-blue-50/50 border border-blue-100 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 text-sm font-bold flex-shrink-0">
                             {index + 1}
                           </div>
-                          <div className="flex-1">
-                            <p className="font-semibold text-base">{prescription.medication_name}</p>
-                            <div className="grid gap-2 mt-3 sm:grid-cols-2">
-                              <div>
-                                <p className="text-xs text-muted-foreground">Dosage</p>
-                                <p className="text-sm font-medium">{prescription.dosage}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base text-blue-900">{prescription.medication_name}</p>
+                            <div className="grid gap-2 mt-3 sm:grid-cols-3">
+                              <div className="bg-white/60 p-2 rounded border border-blue-100">
+                                <p className="text-xs text-gray-600 font-medium">DOSAGE</p>
+                                <p className="text-sm font-semibold text-gray-800">{prescription.dosage}</p>
                               </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Frequency</p>
-                                <p className="text-sm font-medium">{prescription.frequency}</p>
+                              <div className="bg-white/60 p-2 rounded border border-blue-100">
+                                <p className="text-xs text-gray-600 font-medium">FREQUENCY</p>
+                                <p className="text-sm font-semibold text-gray-800">{prescription.frequency || 'As prescribed'}</p>
                               </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Duration</p>
-                                <p className="text-sm font-medium">{prescription.duration}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Date Prescribed</p>
-                                <p className="text-sm font-medium">{new Date(prescription.created_at).toLocaleDateString()}</p>
+                              <div className="bg-white/60 p-2 rounded border border-blue-100">
+                                <p className="text-xs text-gray-600 font-medium">DURATION</p>
+                                <p className="text-sm font-semibold text-gray-800">{prescription.duration || 'As prescribed'}</p>
                               </div>
                             </div>
                             {prescription.instructions && (
-                              <div className="mt-3 p-2 rounded bg-primary/5 border-l-2 border-primary">
-                                <p className="text-xs text-muted-foreground">Instructions</p>
-                                <p className="text-sm mt-1">{prescription.instructions}</p>
+                              <div className="mt-3 p-2 rounded bg-amber-50 border border-amber-200">
+                                <p className="text-xs text-amber-900 font-medium">SPECIAL INSTRUCTIONS</p>
+                                <p className="text-xs text-amber-800 mt-1">{prescription.instructions}</p>
                               </div>
                             )}
+                            <div className="flex items-center justify-between mt-3">
+                              <p className="text-xs text-gray-500">Issued: {new Date(prescription.created_at).toLocaleDateString('en-IN')}</p>
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => handleEditPrescription(prescription)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  onClick={async () => {
+                                    try {
+                                      await generateSinglePrescriptionPDF(patient, prescription)
+                                      toast({
+                                        title: "Success",
+                                        description: `${prescription.medication_name} prescription downloaded`,
+                                        variant: "default",
+                                      })
+                                    } catch (error) {
+                                      console.error("[v0] Error downloading prescription:", error)
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to download prescription",
+                                        variant: "destructive",
+                                      })
+                                    }
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Download
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

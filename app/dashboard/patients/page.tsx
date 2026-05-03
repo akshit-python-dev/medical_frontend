@@ -32,18 +32,23 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { usePatients } from '@/hooks/usePatients'
 import { Plus, MoreHorizontal, Edit, Trash2, Eye, AlertCircle, Search, Loader } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from "@/hooks/use-toast"
 
 export default function PatientsPage() {
-  const { patients, isLoading, isError, error, createPatient, deletePatient } = usePatients()
+  const { patients, isLoading, isError, error, createPatient, updatePatient, deletePatient } = usePatients()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingPatient, setEditingPatient] = useState<any>(null)
   const [newPatient, setNewPatient] = useState({
     first_name: '',
     last_name: '',
     email: '',
     phone: '',
     date_of_birth: '',
+    father_name: '',
     gender: 'M',
     address: '',
   })
@@ -58,7 +63,11 @@ export default function PatientsPage() {
 
   const handleAddPatient = useCallback(async () => {
     if (!newPatient.first_name || !newPatient.last_name || !newPatient.email) {
-      alert('Please fill in all required fields')
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
       return
     }
 
@@ -72,16 +81,86 @@ export default function PatientsPage() {
         email: '',
         phone: '',
         date_of_birth: '',
+        father_name: '',
         gender: 'M',
         address: '',
       })
+      toast({
+        title: "Success",
+        description: "Patient created successfully",
+        variant: "default",
+      })
     } catch (err) {
       console.error('[v0] Error creating patient:', err)
-      alert('Failed to create patient')
+      toast({
+        title: "Error",
+        description: "Failed to create patient",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
-  }, [newPatient, createPatient])
+  }, [newPatient, createPatient, toast])
+
+  const handleEditPatient = useCallback(
+    async (patient: any) => {
+      setEditingPatient(patient)
+      setNewPatient({
+        first_name: patient.first_name,
+        last_name: patient.last_name,
+        email: patient.email,
+        phone: patient.phone,
+        date_of_birth: patient.date_of_birth || '',
+        father_name: patient.father_name || '',
+        gender: patient.gender,
+        address: patient.address,
+      })
+      setIsEditDialogOpen(true)
+    },
+    []
+  )
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!newPatient.first_name || !newPatient.last_name || !newPatient.email) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await updatePatient(editingPatient.id, newPatient)
+      setIsEditDialogOpen(false)
+      setEditingPatient(null)
+      setNewPatient({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        date_of_birth: '',
+        father_name: '',
+        gender: 'M',
+        address: '',
+      })
+      toast({
+        title: "Success",
+        description: "Patient updated successfully",
+        variant: "default",
+      })
+    } catch (err) {
+      console.error('[v0] Error updating patient:', err)
+      toast({
+        title: "Error",
+        description: "Failed to update patient",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [newPatient, editingPatient, updatePatient, toast])
 
   const handleDeletePatient = useCallback(
     async (id: number) => {
@@ -89,12 +168,21 @@ export default function PatientsPage() {
 
       try {
         await deletePatient(id)
+        toast({
+          title: "Success",
+          description: "Patient deleted successfully",
+          variant: "default",
+        })
       } catch (err) {
         console.error('[v0] Error deleting patient:', err)
-        alert('Failed to delete patient')
+        toast({
+          title: "Error",
+          description: "Failed to delete patient",
+          variant: "destructive",
+        })
       }
     },
-    [deletePatient]
+    [deletePatient, toast]
   )
 
   if (isError) {
@@ -173,6 +261,14 @@ export default function PatientsPage() {
                 />
               </div>
               <div>
+                <label className="text-sm font-medium">Father&apos;s Name</label>
+                <Input
+                  placeholder="Father's name"
+                  value={newPatient.father_name}
+                  onChange={(e) => setNewPatient({ ...newPatient, father_name: e.target.value })}
+                />
+              </div>
+              <div>
                 <label className="text-sm font-medium">Gender</label>
                 <select
                   className="w-full px-3 py-2 border rounded-md"
@@ -211,6 +307,101 @@ export default function PatientsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Patient</DialogTitle>
+            <DialogDescription>Update patient information</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">First Name *</label>
+              <Input
+                placeholder="First name"
+                value={newPatient.first_name}
+                onChange={(e) => setNewPatient({ ...newPatient, first_name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Last Name *</label>
+              <Input
+                placeholder="Last name"
+                value={newPatient.last_name}
+                onChange={(e) => setNewPatient({ ...newPatient, last_name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email *</label>
+              <Input
+                type="email"
+                placeholder="email@example.com"
+                value={newPatient.email}
+                onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Phone</label>
+              <Input
+                placeholder="Phone number"
+                value={newPatient.phone}
+                onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Date of Birth</label>
+              <Input
+                type="date"
+                value={newPatient.date_of_birth}
+                onChange={(e) => setNewPatient({ ...newPatient, date_of_birth: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Father&apos;s Name</label>
+              <Input
+                placeholder="Father's name"
+                value={newPatient.father_name}
+                onChange={(e) => setNewPatient({ ...newPatient, father_name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Gender</label>
+              <select
+                className="w-full px-3 py-2 border rounded-md"
+                value={newPatient.gender}
+                onChange={(e) => setNewPatient({ ...newPatient, gender: e.target.value })}
+              >
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Address</label>
+              <Input
+                placeholder="Address"
+                value={newPatient.address}
+                onChange={(e) => setNewPatient({ ...newPatient, address: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -267,6 +458,10 @@ export default function PatientsPage() {
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
                               </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditPatient(patient)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDeletePatient(patient.id)}

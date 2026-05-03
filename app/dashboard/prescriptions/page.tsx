@@ -28,37 +28,59 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { usePrescriptions } from '@/hooks/usePrescriptions'
 import { usePatients } from '@/hooks/usePatients'
-import { Plus, Search, Pill, MoreHorizontal, AlertCircle, Loader, Trash2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { Plus, Search, Pill, MoreHorizontal, AlertCircle, Loader, Trash2, X, Edit, Download } from 'lucide-react'
 
 export default function PrescriptionsPage() {
-  const { prescriptions, isLoading, isError, error, createPrescription, deletePrescription } = usePrescriptions()
+  const { prescriptions, isLoading, isError, error, createPrescription, deletePrescription, updatePrescription } = usePrescriptions()
   const { patients } = usePatients()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [newPrescription, setNewPrescription] = useState({
-    patient: '',
-    medication_name: '',
-    dosage: '',
-    frequency: '',
-    duration: '',
-    instructions: '',
-  })
-
-  const getPatientDisplayName = (patient: unknown) => {
-    if (patient && typeof patient === 'object' && 'first_name' in patient && 'last_name' in patient) {
-      const p = patient as { first_name?: string; last_name?: string; id?: number }
-      const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim()
-      return fullName || `Patient #${p.id ?? 'N/A'}`
+  const [selectedPatient, setSelectedPatient] = useState('')
+  const [editingPrescription, setEditingPrescription] = useState<any>(null)
+  const [editFormData, setEditFormData] = useState<any>(null)
+  const [medicines, setMedicines] = useState<Array<{
+    medication_name: string
+    dosage: string
+    frequency: string
+    duration: string
+    instructions: string
+  }>>([
+    {
+      medication_name: '',
+      dosage: '',
+      frequency: '',
+      duration: '',
+      instructions: '',
     }
-    return `Patient #${patient as number}`
-  }
+  ])
+
+  // const getPatientDisplayName = (patient: unknown) => {
+  //   // if (patient && typeof patient === 'object' && 'first_name' in patient && 'last_name' in patient) {
+  //   //   const p = patient as { first_name?: string; last_name?: string; id?: number }
+  //   //   const fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim()
+  //   //   return fullName || `Patient #${p.id ?? 'N/A'}`
+  //   // }
+  //   if (patient && patient.patient_name){
+  //     return patient.patient_name
+  //   }
+  //   return `Patient #${patient as number}`
+  // }
 
   const filteredPrescriptions = prescriptions.filter((prescription) => {
-    const patientName = getPatientDisplayName(prescription.patient).toLowerCase()
+    const patientName = prescription.patient_name.toLowerCase()
     const instructions = (prescription.instructions || '').toLowerCase()
     const matchesSearch =
       patientName.includes(searchQuery.toLowerCase()) ||
@@ -69,37 +91,124 @@ export default function PrescriptionsPage() {
   })
 
   const handleCreatePrescription = useCallback(async () => {
-    if (!newPrescription.patient || !newPrescription.medication_name || !newPrescription.dosage) {
-      alert('Please fill in all required fields')
+    if (!selectedPatient) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a patient",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const validMedicines = medicines.filter(m => m.medication_name && m.dosage)
+    if (validMedicines.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please add at least one medication",
+        variant: "destructive",
+      })
       return
     }
 
     setIsSubmitting(true)
     try {
-      await createPrescription({
-        patient: parseInt(newPrescription.patient, 10),
-        medication_name: newPrescription.medication_name,
-        dosage: newPrescription.dosage,
-        frequency: newPrescription.frequency,
-        duration: newPrescription.duration,
-        instructions: newPrescription.instructions,
-      })
+      // Create each medicine as a separate prescription
+      for (const medicine of validMedicines) {
+        await createPrescription({
+          patient: parseInt(selectedPatient, 10),
+          ...medicine,
+        })
+      }
       setIsAddDialogOpen(false)
-      setNewPrescription({
-        patient: '',
+      setSelectedPatient('')
+      setMedicines([{
         medication_name: '',
         dosage: '',
         frequency: '',
         duration: '',
         instructions: '',
+      }])
+      toast({
+        title: "Success",
+        description: `${validMedicines.length} prescription(s) created successfully`,
+        variant: "default",
       })
     } catch (err) {
       console.error('[v0] Error creating prescription:', err)
-      alert('Failed to create prescription')
+      toast({
+        title: "Error",
+        description: "Failed to create prescription",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
-  }, [newPrescription, createPrescription])
+  }, [selectedPatient, medicines, createPrescription, toast])
+
+  const handleAddMedicine = () => {
+    setMedicines([...medicines, {
+      medication_name: '',
+      dosage: '',
+      frequency: '',
+      duration: '',
+      instructions: '',
+    }])
+  }
+
+  const handleRemoveMedicine = (index: number) => {
+    setMedicines(medicines.filter((_, i) => i !== index))
+  }
+
+  const handleUpdateMedicine = (index: number, field: string, value: string) => {
+    const updatedMedicines = [...medicines]
+    updatedMedicines[index] = { ...updatedMedicines[index], [field]: value }
+    setMedicines(updatedMedicines)
+  }
+
+  const handleEditPrescription = (prescription: any) => {
+    setEditingPrescription(prescription)
+    setEditFormData({
+      medication_name: prescription.medication_name,
+      dosage: prescription.dosage,
+      frequency: prescription.frequency,
+      duration: prescription.duration,
+      instructions: prescription.instructions,
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleSaveEditPrescription = async () => {
+    if (!editFormData.medication_name || !editFormData.dosage) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await updatePrescription(editingPrescription.id, editFormData)
+      setIsEditDialogOpen(false)
+      setEditingPrescription(null)
+      setEditFormData(null)
+      toast({
+        title: "Success",
+        description: "Prescription updated successfully",
+        variant: "default",
+      })
+    } catch (err) {
+      console.error('[v0] Error updating prescription:', err)
+      toast({
+        title: "Error",
+        description: "Failed to update prescription",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const handleDeletePrescription = useCallback(
     async (id: number) => {
@@ -141,18 +250,18 @@ export default function PrescriptionsPage() {
               New Prescription
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Prescription</DialogTitle>
-              <DialogDescription>Add a new medication prescription for a patient</DialogDescription>
+              <DialogDescription>Add multiple medications for a patient</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Patient *</label>
                 <select
                   className="w-full px-3 py-2 border rounded-md"
-                  value={newPrescription.patient}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, patient: e.target.value })}
+                  value={selectedPatient}
+                  onChange={(e) => setSelectedPatient(e.target.value)}
                 >
                   <option value="">Select a patient</option>
                   {patients.map((p) => (
@@ -162,54 +271,98 @@ export default function PrescriptionsPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Medications Accordion */}
               <div>
-                <label className="text-sm font-medium">Medication Name *</label>
-                {/* <Input
-                  placeholder="e.g., Aspirin, Amoxicillin"
-                  value={newPrescription.medication_name}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, medication_name: e.target.value })}
-                /> */}
-                <textarea
-                  placeholder="e.g., Aspirin, Amoxicillin"
-                  className="w-full px-3 py-2 border rounded-md"
-                  rows={3}
-                  value={newPrescription.medication_name}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, medication_name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Dosage *</label>
-                <Input
-                  placeholder="e.g., 500mg, 10ml"
-                  value={newPrescription.dosage}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, dosage: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Frequency</label>
-                <Input
-                  placeholder="e.g., Twice daily, Once at bedtime"
-                  value={newPrescription.frequency}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, frequency: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Duration</label>
-                <Input
-                  placeholder="e.g., 7 days, 1 month"
-                  value={newPrescription.duration}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, duration: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Notes</label>
-                <textarea
-                  placeholder="Additional instructions or warnings"
-                  className="w-full px-3 py-2 border rounded-md"
-                  rows={3}
-                  value={newPrescription.instructions}
-                  onChange={(e) => setNewPrescription({ ...newPrescription, instructions: e.target.value })}
-                />
+                <div className="flex justify-between items-center mb-3">
+                  <label className="text-sm font-medium">Medications *</label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddMedicine}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Medicine
+                  </Button>
+                </div>
+                {medicines.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No medications added</p>
+                ) : (
+                  <Accordion type="single" collapsible className="w-full border rounded-lg">
+                    {medicines.map((medicine, index) => (
+                      <AccordionItem key={index} value={`medicine-${index}`} className="border-b last:border-b-0">
+                        <div className="flex items-center justify-between">
+                          <AccordionTrigger className="flex-1 hover:no-underline">
+                            <div className="text-left">
+                              <p className="font-medium">
+                                {medicine.medication_name || `Medicine ${index + 1}`}
+                              </p>
+                              {medicine.dosage && (
+                                <p className="text-xs text-muted-foreground">{medicine.dosage}</p>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRemoveMedicine(index)
+                            }}
+                            className="text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <AccordionContent className="space-y-4 pt-4">
+                          <div>
+                            <label className="text-sm font-medium">Medication Name *</label>
+                            <Input
+                              placeholder="e.g., Aspirin, Amoxicillin"
+                              value={medicine.medication_name}
+                              onChange={(e) => handleUpdateMedicine(index, 'medication_name', e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm font-medium">Dosage *</label>
+                              <Input
+                                placeholder="e.g., 500mg, 10ml"
+                                value={medicine.dosage}
+                                onChange={(e) => handleUpdateMedicine(index, 'dosage', e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium">Frequency</label>
+                              <Input
+                                placeholder="e.g., Twice daily"
+                                value={medicine.frequency}
+                                onChange={(e) => handleUpdateMedicine(index, 'frequency', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm font-medium">Duration</label>
+                              <Input
+                                placeholder="e.g., 7 days"
+                                value={medicine.duration}
+                                onChange={(e) => handleUpdateMedicine(index, 'duration', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">Instructions</label>
+                            <textarea
+                              placeholder="Additional instructions or warnings"
+                              className="w-full px-3 py-2 border rounded-md"
+                              rows={2}
+                              value={medicine.instructions}
+                              onChange={(e) => handleUpdateMedicine(index, 'instructions', e.target.value)}
+                            />
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                )}
               </div>
             </div>
             <DialogFooter>
@@ -223,7 +376,7 @@ export default function PrescriptionsPage() {
                     Creating...
                   </>
                 ) : (
-                  'Create Prescription'
+                  'Create Prescriptions'
                 )}
               </Button>
             </DialogFooter>
@@ -270,7 +423,7 @@ export default function PrescriptionsPage() {
                 <TableBody>
                   {filteredPrescriptions.map((prescription) => (
                     <TableRow key={prescription.id}>
-                      <TableCell className="font-medium">{getPatientDisplayName(prescription.patient)}</TableCell>
+                      <TableCell className="font-medium">{prescription.patient_name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Pill className="h-4 w-4 text-muted-foreground" />
@@ -294,6 +447,10 @@ export default function PrescriptionsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditPrescription(prescription)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDeletePrescription(prescription.id)}
                               className="text-destructive"
@@ -316,6 +473,104 @@ export default function PrescriptionsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Prescription Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Prescription</DialogTitle>
+            <DialogDescription>Update prescription details</DialogDescription>
+          </DialogHeader>
+          {editFormData && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Medication Name *</label>
+                <Input
+                  placeholder="e.g., Aspirin"
+                  value={editFormData.medication_name}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      medication_name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Dosage *</label>
+                  <Input
+                    placeholder="e.g., 500mg"
+                    value={editFormData.dosage}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        dosage: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Frequency</label>
+                  <Input
+                    placeholder="e.g., Twice daily"
+                    value={editFormData.frequency}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        frequency: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Duration</label>
+                <Input
+                  placeholder="e.g., 7 days"
+                  value={editFormData.duration}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      duration: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Instructions</label>
+                <textarea
+                  placeholder="Special instructions"
+                  className="w-full px-3 py-2 border rounded-md"
+                  rows={3}
+                  value={editFormData.instructions}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      instructions: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEditPrescription} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
