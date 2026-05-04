@@ -4,7 +4,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
-import { useTheme } from "@/lib/theme-context"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -15,8 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Bell, Search, Moon, Sun, User, Settings, LogOut, Menu } from "lucide-react"
-import { notifications } from "@/lib/data"
+import { Search, User, Settings, LogOut, Menu } from "lucide-react"
 
 interface NavbarProps {
   onMenuClick: () => void
@@ -25,7 +23,6 @@ interface NavbarProps {
 export function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter()
   const { user, logout } = useAuth()
-  const { theme, toggleTheme } = useTheme()
   const [searchQuery, setSearchQuery] = useState("")
 
   const handleLogout = () => {
@@ -33,8 +30,6 @@ export function Navbar({ onMenuClick }: NavbarProps) {
     router.replace("/")
   }
   
-  const unreadNotifications = notifications.filter((n) => !n.read).length
-
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
       {/* Mobile Menu Button */}
@@ -63,7 +58,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
       {/* Right Actions */}
       <div className="flex items-center gap-2">
-        {/* Theme Toggle */}
+        {/* Theme Toggle
         <Button variant="ghost" size="icon" onClick={toggleTheme}>
           {theme === "light" ? (
             <Moon className="h-5 w-5" />
@@ -71,8 +66,9 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             <Sun className="h-5 w-5" />
           )}
         </Button>
+        */}
 
-        {/* Notifications */}
+        {/* Notifications
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
@@ -105,6 +101,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        */}
 
         {/* Profile */}
         <DropdownMenu>

@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/hooks/useAuth"
+import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "@/lib/theme-context"
 import {
   User,
@@ -18,21 +19,34 @@ import {
 } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, isLoading, updateProfile } = useAuth()
   const { theme, setTheme } = useTheme()
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  
+  const { toast } = useToast()
+
   const [profileData, setProfileData] = useState({
-    first_name: user?.first_name || "",
-    last_name: user?.last_name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    specialization: user?.specialization || "",
-    username: user?.username || "",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    specialization: "",
+    username: "",
   })
-  console.log(profileData, "asdasdasasdasd");
-  
+
+  useEffect(() => {
+    if (!user) return
+
+    setProfileData({
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      specialization: user.specialization || "",
+      username: user.username || "",
+    })
+  }, [user])
+
   const [clinicData, setClinicData] = useState({
     clinicName: "E Bio Cares Clinic",
     address: "123 Medical Plaza, Healthcare District",
@@ -50,11 +64,30 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     setIsSaving(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSaving(false)
-    setSaveSuccess(true)
-    setTimeout(() => setSaveSuccess(false), 3000)
+    try {
+      await updateProfile({
+        first_name: profileData.first_name.trim(),
+        last_name: profileData.last_name.trim(),
+        email: profileData.email.trim(),
+        phone: profileData.phone.trim(),
+        specialization: profileData.specialization.trim(),
+      })
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      })
+    } catch (error) {
+      console.error("[v0] Error updating profile:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSaveClinic = async () => {
@@ -95,23 +128,23 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
           </TabsTrigger>
-          <TabsTrigger value="clinic" className="flex items-center gap-2">
+          {/* <TabsTrigger value="clinic" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Clinic</span>
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Lock className="h-4 w-4" />
             <span className="hidden sm:inline">Security</span>
           </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center gap-2">
+          {/* <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">Theme</span>
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         {/* Profile Settings */}
@@ -144,6 +177,7 @@ export default function SettingsPage() {
                       setProfileData({ ...profileData, first_name: e.target.value })
                     }
                     placeholder="First name"
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -154,6 +188,7 @@ export default function SettingsPage() {
                       setProfileData({ ...profileData, last_name: e.target.value })
                     }
                     placeholder="Last name"
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -176,6 +211,7 @@ export default function SettingsPage() {
                       setProfileData({ ...profileData, email: e.target.value })
                     }
                     placeholder="doctor@clinic.com"
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -186,6 +222,7 @@ export default function SettingsPage() {
                       setProfileData({ ...profileData, phone: e.target.value })
                     }
                     placeholder="+91 XXXXX XXXXX"
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -196,14 +233,15 @@ export default function SettingsPage() {
                       setProfileData({ ...profileData, specialization: e.target.value })
                     }
                     placeholder="Pediatric Neurology"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
 
               <div className="flex justify-end pt-4">
-                <Button onClick={handleSaveProfile} disabled={isSaving}>
+                <Button onClick={handleSaveProfile} disabled={isSaving || isLoading}>
                   <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  {isSaving ? "Saving..." : isLoading ? "Loading..." : "Save Changes"}
                 </Button>
               </div>
             </CardContent>
@@ -211,7 +249,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* Clinic Settings */}
-        <TabsContent value="clinic">
+      {/*}  <TabsContent value="clinic">
           <Card>
             <CardHeader>
               <CardTitle>Clinic Details</CardTitle>
@@ -292,7 +330,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>*/}
 
         {/* Security Settings */}
         <TabsContent value="security">

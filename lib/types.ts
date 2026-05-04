@@ -7,7 +7,7 @@ export interface DoctorUser {
     last_name: string
     phone: string
     specialization: string
-    is_doctor: boolean
+    is_doctor?: boolean
     is_active: boolean
     date_joined: string
   }
@@ -93,15 +93,17 @@ export interface DoctorUser {
   export interface Prescription {
     id: number
     patient: number | Patient
+    patient_name?: string
     doctor?: number
     medication_name: string
-    dosage: string
-    frequency: string
-    duration: string
-    instructions: string
-    notes?: string
     created_at: string
     updated_at?: string
+  }
+
+  export interface BillingItem {
+    id?: number
+    medicine_name: string
+    amount: string | number
   }
   
   // Billing types
@@ -117,6 +119,7 @@ export interface DoctorUser {
     patient: number | Patient
     patient_name?: string
     doctor?: number
+    items?: BillingItem[]
     amount: string | number
     status: BillingStatus
     description: string

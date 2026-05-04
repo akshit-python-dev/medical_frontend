@@ -10,11 +10,9 @@ import {
   FileText,
   Pill,
   CreditCard,
-  Bell,
   Settings,
   ChevronLeft,
   ChevronRight,
-  Stethoscope,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
@@ -30,7 +28,7 @@ const navItems = [
   { href: "/dashboard/reports", label: "Medical Reports", icon: FileText },
   { href: "/dashboard/prescriptions", label: "Prescriptions", icon: Pill },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
+  // { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
 

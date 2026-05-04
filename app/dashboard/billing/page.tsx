@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -31,22 +31,38 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useBillingStats } from '@/hooks/useBillingStats'
 import { usePatients } from '@/hooks/usePatients'
-import { Plus, Search, IndianRupee, CheckCircle2, MoreHorizontal, AlertCircle, Loader } from 'lucide-react'
-import { BillingStatus } from '@/lib/types'
+import { useToast } from '@/hooks/use-toast'
+import { Plus, Search, IndianRupee, CheckCircle2, MoreHorizontal, AlertCircle, Loader, Trash2, Edit } from 'lucide-react'
+import { Billing, BillingItem, BillingStatus } from '@/lib/types'
+
+function getTodayDate() {
+  return new Date().toISOString().split('T')[0]
+}
 
 export default function BillingPage() {
-  const { invoices, stats, isLoading, isError, error, createInvoice, markPaid } = useBillingStats()
+  const { invoices, stats, isLoading, isError, error, createInvoice, updateInvoice, markPaid } = useBillingStats()
   const { patients } = usePatients()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingInvoice, setEditingInvoice] = useState<Billing | null>(null)
   const [newInvoice, setNewInvoice] = useState({
     patient: '',
-    amount: 0,
-    description: '',
-    due_date: '',
+    due_date: getTodayDate(),
   })
+  const [editInvoice, setEditInvoice] = useState({
+    patient: '',
+    due_date: getTodayDate(),
+  })
+  const [invoiceItems, setInvoiceItems] = useState<BillingItem[]>([
+    { medicine_name: '', amount: '' },
+  ])
+  const [editInvoiceItems, setEditInvoiceItems] = useState<BillingItem[]>([
+    { medicine_name: '', amount: '' },
+  ])
 
   const getPatientName = (patient: unknown, fallbackName?: string) => {
     if (fallbackName) return fallbackName
@@ -60,16 +76,29 @@ export default function BillingPage() {
 
   const filteredInvoices = invoices.filter((invoice) => {
     const patientName = getPatientName(invoice.patient, invoice.patient_name).toLowerCase()
+    const medicineNames = (invoice.items || []).map((item) => item.medicine_name.toLowerCase()).join(' ')
     const matchesSearch =
       patientName.includes(searchQuery.toLowerCase()) ||
-      invoice.description.toLowerCase().includes(searchQuery.toLowerCase())
+      invoice.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      medicineNames.includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
+  const totalAmount = invoiceItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  const editTotalAmount = editInvoiceItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+
   const handleCreateInvoice = useCallback(async () => {
-    if (!newInvoice.patient || !newInvoice.amount || !newInvoice.description) {
-      alert('Please fill in all required fields')
+    const validItems = invoiceItems.filter(
+      (item) => item.medicine_name.trim() && Number(item.amount) > 0
+    )
+
+    if (!newInvoice.patient || !newInvoice.due_date || validItems.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Select a patient, due date, and at least one medicine with price',
+        variant: 'destructive',
+      })
       return
     }
 
@@ -77,37 +106,150 @@ export default function BillingPage() {
     try {
       await createInvoice({
         patient_id: parseInt(newInvoice.patient, 10),
-        amount: newInvoice.amount,
-        description: newInvoice.description,
         due_date: newInvoice.due_date,
         status: BillingStatus.PENDING,
+        items: validItems,
       })
       setIsAddDialogOpen(false)
       setNewInvoice({
         patient: '',
-        amount: 0,
-        description: '',
-        due_date: '',
+        due_date: getTodayDate(),
+      })
+      setInvoiceItems([{ medicine_name: '', amount: '' }])
+      toast({
+        title: 'Success',
+        description: 'Invoice created successfully',
       })
     } catch (err) {
       console.error('[v0] Error creating invoice:', err)
-      alert('Failed to create invoice')
+      toast({
+        title: 'Error',
+        description: 'Failed to create invoice',
+        variant: 'destructive',
+      })
     } finally {
       setIsSubmitting(false)
     }
-  }, [newInvoice, createInvoice])
+  }, [newInvoice, invoiceItems, createInvoice, toast])
 
   const handleMarkPaid = useCallback(
     async (id: number) => {
       try {
         await markPaid(id)
+        toast({
+          title: 'Success',
+          description: 'Invoice marked as paid',
+        })
       } catch (err) {
         console.error('[v0] Error marking paid:', err)
-        alert('Failed to mark invoice as paid')
+        toast({
+          title: 'Error',
+          description: 'Failed to mark invoice as paid',
+          variant: 'destructive',
+        })
       }
     },
-    [markPaid]
+    [markPaid, toast]
   )
+
+  const handleAddMedicine = () => {
+    setInvoiceItems((prev) => [...prev, { medicine_name: '', amount: '' }])
+  }
+
+  const handleRemoveMedicine = (index: number) => {
+    setInvoiceItems((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+  }
+
+  const handleUpdateMedicine = (index: number, field: keyof BillingItem, value: string) => {
+    setInvoiceItems((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      )
+    )
+  }
+
+  const handleEditAddMedicine = () => {
+    setEditInvoiceItems((prev) => [...prev, { medicine_name: '', amount: '' }])
+  }
+
+  const handleEditRemoveMedicine = (index: number) => {
+    setEditInvoiceItems((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
+  }
+
+  const handleEditUpdateMedicine = (index: number, field: keyof BillingItem, value: string) => {
+    setEditInvoiceItems((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      )
+    )
+  }
+
+  const handleEditInvoice = (invoice: Billing) => {
+    setEditingInvoice(invoice)
+    setEditInvoice({
+      patient:
+        typeof invoice.patient === 'object' && invoice.patient !== null
+          ? String(invoice.patient.id)
+          : String(invoice.patient),
+      due_date: invoice.due_date || getTodayDate(),
+    })
+    setEditInvoiceItems(
+      invoice.items && invoice.items.length > 0
+        ? invoice.items.map((item) => ({
+            id: item.id,
+            medicine_name: item.medicine_name,
+            amount: item.amount,
+          }))
+        : [{ medicine_name: invoice.description || '', amount: invoice.amount }]
+    )
+    setIsEditDialogOpen(true)
+  }
+
+  const handleSaveInvoice = useCallback(async () => {
+    if (!editingInvoice) return
+
+    const validItems = editInvoiceItems.filter(
+      (item) => item.medicine_name.trim() && Number(item.amount) > 0
+    )
+
+    if (!editInvoice.patient || !editInvoice.due_date || validItems.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Select a patient, due date, and at least one medicine with price',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await updateInvoice(editingInvoice.id, {
+        patient_id: parseInt(editInvoice.patient, 10),
+        due_date: editInvoice.due_date,
+        items: validItems,
+      })
+      setIsEditDialogOpen(false)
+      setEditingInvoice(null)
+      setEditInvoice({
+        patient: '',
+        due_date: getTodayDate(),
+      })
+      setEditInvoiceItems([{ medicine_name: '', amount: '' }])
+      toast({
+        title: 'Success',
+        description: 'Invoice updated successfully',
+      })
+    } catch (err) {
+      console.error('[v0] Error updating invoice:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to update invoice',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [editingInvoice, editInvoice, editInvoiceItems, toast, updateInvoice])
 
   if (isError) {
     return (
@@ -160,22 +302,49 @@ export default function BillingPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="text-sm font-medium">Description *</label>
-                <Input
-                  placeholder="e.g., Consultation, Lab Tests"
-                  value={newInvoice.description}
-                  onChange={(e) => setNewInvoice({ ...newInvoice, description: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Amount (₹) *</label>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={newInvoice.amount || ''}
-                  onChange={(e) => setNewInvoice({ ...newInvoice, amount: parseFloat(e.target.value) || 0 })}
-                />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Medicines *</label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddMedicine}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add More Medicine
+                  </Button>
+                </div>
+                {invoiceItems.map((item, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_140px_auto] gap-3 items-end">
+                    <div>
+                      <label className="text-sm font-medium">Medicine Name</label>
+                      <Input
+                        placeholder="e.g., Paracetamol"
+                        value={item.medicine_name}
+                        onChange={(e) => handleUpdateMedicine(index, 'medicine_name', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Price (₹)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={item.amount}
+                        onChange={(e) => handleUpdateMedicine(index, 'amount', e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleRemoveMedicine(index)}
+                      disabled={invoiceItems.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+                  Total Amount: Rs. {totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Due Date</label>
@@ -198,6 +367,98 @@ export default function BillingPage() {
                   </>
                 ) : (
                   'Create Invoice'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Invoice</DialogTitle>
+              <DialogDescription>Update patient, due date, and bill items</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Patient *</label>
+                <select
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={editInvoice.patient}
+                  onChange={(e) => setEditInvoice({ ...editInvoice, patient: e.target.value })}
+                >
+                  <option value="">Select a patient</option>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.first_name} {p.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Medicines *</label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleEditAddMedicine}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add More Medicine
+                  </Button>
+                </div>
+                {editInvoiceItems.map((item, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_140px_auto] gap-3 items-end">
+                    <div>
+                      <label className="text-sm font-medium">Medicine Name</label>
+                      <Input
+                        placeholder="e.g., Paracetamol"
+                        value={item.medicine_name}
+                        onChange={(e) => handleEditUpdateMedicine(index, 'medicine_name', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Price (₹)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={item.amount}
+                        onChange={(e) => handleEditUpdateMedicine(index, 'amount', e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleEditRemoveMedicine(index)}
+                      disabled={editInvoiceItems.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium">
+                  Total Amount: Rs. {editTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Due Date</label>
+                <Input
+                  type="date"
+                  value={editInvoice.due_date}
+                  onChange={(e) => setEditInvoice({ ...editInvoice, due_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveInvoice} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Invoice'
                 )}
               </Button>
             </DialogFooter>
@@ -295,7 +556,7 @@ export default function BillingPage() {
                   <TableRow>
                     <TableHead>Invoice ID</TableHead>
                     <TableHead>Patient</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Medicines</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -307,7 +568,19 @@ export default function BillingPage() {
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">INV-{invoice.id}</TableCell>
                       <TableCell>{getPatientName(invoice.patient, invoice.patient_name)}</TableCell>
-                      <TableCell>{invoice.description}</TableCell>
+                      <TableCell>
+                        {invoice.items && invoice.items.length > 0 ? (
+                          <div className="space-y-1">
+                            {invoice.items.map((item, index) => (
+                              <div key={`${invoice.id}-${index}`} className="text-sm">
+                                {item.medicine_name}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          invoice.description
+                        )}
+                      </TableCell>
                       <TableCell>
                         <span className="flex items-center gap-1 font-medium">
                           <IndianRupee className="h-4 w-4" />
@@ -334,6 +607,10 @@ export default function BillingPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditInvoice(invoice)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Invoice
+                            </DropdownMenuItem>
                             {invoice.status !== BillingStatus.PAID && (
                               <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
                                 <CheckCircle2 className="h-4 w-4 mr-2" />

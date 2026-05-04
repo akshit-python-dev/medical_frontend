@@ -1,11 +1,12 @@
 "use client"
 
 import { use, useEffect, useState } from "react"
-import { notFound, useRouter } from "next/navigation"
+import { notFound } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Spinner } from "@/components/ui/spinner"
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { usePatients } from "@/hooks/usePatients"
 import { useToast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api-client"
 import { generatePatientPDF } from "@/lib/pdf-generator"
 import { generatePrescriptionPDF } from "@/lib/prescription-pdf-generator"
 import { generateSinglePrescriptionPDF } from "@/lib/single-prescription-pdf"
@@ -36,8 +38,6 @@ import {
   Edit,
   Download,
   Loader,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react"
 
 interface PatientProfilePageProps {
@@ -45,14 +45,10 @@ interface PatientProfilePageProps {
 }
 
 export default function PatientProfilePage({ params }: PatientProfilePageProps) {
-  const router = useRouter()
   const { toast } = useToast()
   const { id } = use(params)
   const patientId = parseInt(id, 10)
   const [patient, setPatient] = useState<any>(null)
-  const [medicalRecords, setMedicalRecords] = useState<any[]>([])
-  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
-  const [billingSummary, setBillingSummary] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -65,7 +61,7 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
   const [downloadToDate, setDownloadToDate] = useState<string>('')
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
 
-  const { getPatient, getPatientMedicalHistory, getUpcomingAppointments, getBillingSummary, updatePatient } = usePatients()
+  const { getPatient, updatePatient } = usePatients()
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -79,29 +75,6 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
         }
         setPatient(patientData)
 
-        // Fetch medical history (MedicalRecords)
-        try {
-          const historyData = await getPatientMedicalHistory(patientId)
-          setMedicalRecords(Array.isArray(historyData) ? historyData : [])
-        } catch (err) {
-          console.error("[v0] Error fetching medical history:", err)
-        }
-
-        // Fetch upcoming appointments
-        try {
-          const appointmentsData = await getUpcomingAppointments(patientId)
-          setUpcomingAppointments(Array.isArray(appointmentsData) ? appointmentsData : [])
-        } catch (err) {
-          console.error("[v0] Error fetching upcoming appointments:", err)
-        }
-
-        // Fetch billing summary
-        try {
-          const summaryData = await getBillingSummary(patientId)
-          setBillingSummary(summaryData)
-        } catch (err) {
-          console.error("[v0] Error fetching billing summary:", err)
-        }
       } catch (err) {
         console.error("[v0] Error fetching patient:", err)
         notFound()
@@ -111,7 +84,7 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
     }
 
     fetchPatientData()
-  }, [patientId, getPatient, getPatientMedicalHistory, getUpcomingAppointments, getBillingSummary])
+  }, [patientId, getPatient])
 
   if (loading) {
     return (
@@ -138,7 +111,13 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
 
   const handleDownloadPatientInfo = async () => {
     try {
-      await generatePatientPDF(patient, appointments, prescriptions)
+      await generatePatientPDF(
+        patient,
+        appointments,
+        prescriptions,
+        patient.medical_records || [],
+        bills
+      )
       toast({
         title: "Success",
         description: "Patient report downloaded successfully",
@@ -205,19 +184,15 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
     setEditingPrescription(prescription)
     setPrescriptionFormData({
       medication_name: prescription.medication_name,
-      dosage: prescription.dosage,
-      frequency: prescription.frequency,
-      duration: prescription.duration,
-      instructions: prescription.instructions,
     })
     setIsEditPrescriptionOpen(true)
   }
 
   const handleSavePrescription = async () => {
-    if (!prescriptionFormData.medication_name || !prescriptionFormData.dosage) {
+    if (!prescriptionFormData.medication_name?.trim()) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please enter medicine details",
         variant: "destructive",
       })
       return
@@ -225,19 +200,14 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
 
     setIsSavingPrescription(true)
     try {
-      // Call API to update prescription
-      const response = await fetch(`/api/prescriptions/${editingPrescription.id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(prescriptionFormData),
+      const response = await apiClient.patch(`prescriptions/${editingPrescription.id}/`, {
+        medication_name: prescriptionFormData.medication_name.trim(),
       })
-      if (!response.ok) throw new Error('Failed to update')
       
-      // Update prescription in state
-      setPatient(prev => ({
+      setPatient((prev: any) => ({
         ...prev,
         prescriptions: prev.prescriptions.map((p: any) =>
-          p.id === editingPrescription.id ? { ...p, ...prescriptionFormData } : p
+          p.id === editingPrescription.id ? response : p
         ),
       }))
       
@@ -351,69 +321,14 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Medication Name *</label>
-                <Input
-                  placeholder="e.g., Aspirin"
+                <Textarea
+                  placeholder="Enter one or more medicines"
+                  className="min-h-40"
                   value={prescriptionFormData.medication_name}
                   onChange={(e) =>
                     setPrescriptionFormData({
                       ...prescriptionFormData,
                       medication_name: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Dosage *</label>
-                  <Input
-                    placeholder="e.g., 500mg"
-                    value={prescriptionFormData.dosage}
-                    onChange={(e) =>
-                      setPrescriptionFormData({
-                        ...prescriptionFormData,
-                        dosage: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Frequency</label>
-                  <Input
-                    placeholder="e.g., Twice daily"
-                    value={prescriptionFormData.frequency}
-                    onChange={(e) =>
-                      setPrescriptionFormData({
-                        ...prescriptionFormData,
-                        frequency: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Duration</label>
-                <Input
-                  placeholder="e.g., 7 days"
-                  value={prescriptionFormData.duration}
-                  onChange={(e) =>
-                    setPrescriptionFormData({
-                      ...prescriptionFormData,
-                      duration: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Instructions</label>
-                <textarea
-                  placeholder="Special instructions"
-                  className="w-full px-3 py-2 border rounded-md"
-                  rows={3}
-                  value={prescriptionFormData.instructions}
-                  onChange={(e) =>
-                    setPrescriptionFormData({
-                      ...prescriptionFormData,
-                      instructions: e.target.value,
                     })
                   }
                 />
@@ -870,10 +785,7 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                           >
                             <span className="font-semibold text-primary min-w-6 pt-0.5">{index + 1}.</span>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium break-words">{prescription.medication_name}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {prescription.dosage} • {prescription.frequency}
-                              </p>
+                              <p className="font-medium break-words whitespace-pre-line">{prescription.medication_name}</p>
                             </div>
                           </div>
                         ))}
@@ -894,27 +806,7 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                             {index + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base text-blue-900">{prescription.medication_name}</p>
-                            <div className="grid gap-2 mt-3 sm:grid-cols-3">
-                              <div className="bg-white/60 p-2 rounded border border-blue-100">
-                                <p className="text-xs text-gray-600 font-medium">DOSAGE</p>
-                                <p className="text-sm font-semibold text-gray-800">{prescription.dosage}</p>
-                              </div>
-                              <div className="bg-white/60 p-2 rounded border border-blue-100">
-                                <p className="text-xs text-gray-600 font-medium">FREQUENCY</p>
-                                <p className="text-sm font-semibold text-gray-800">{prescription.frequency || 'As prescribed'}</p>
-                              </div>
-                              <div className="bg-white/60 p-2 rounded border border-blue-100">
-                                <p className="text-xs text-gray-600 font-medium">DURATION</p>
-                                <p className="text-sm font-semibold text-gray-800">{prescription.duration || 'As prescribed'}</p>
-                              </div>
-                            </div>
-                            {prescription.instructions && (
-                              <div className="mt-3 p-2 rounded bg-amber-50 border border-amber-200">
-                                <p className="text-xs text-amber-900 font-medium">SPECIAL INSTRUCTIONS</p>
-                                <p className="text-xs text-amber-800 mt-1">{prescription.instructions}</p>
-                              </div>
-                            )}
+                            <p className="font-semibold text-base text-blue-900 whitespace-pre-line">{prescription.medication_name}</p>
                             <div className="flex items-center justify-between mt-3">
                               <p className="text-xs text-gray-500">Issued: {new Date(prescription.created_at).toLocaleDateString('en-IN')}</p>
                               <div className="flex gap-2">
@@ -991,6 +883,13 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
                         </p>
                       </div>
                       <div className="flex items-center gap-4">
+                        {invoice.items && invoice.items.length > 0 && (
+                          <div className="text-right text-sm text-muted-foreground">
+                            {invoice.items.map((item: any, index: number) => (
+                              <p key={`${invoice.id}-${index}`}>{item.medicine_name}</p>
+                            ))}
+                          </div>
+                        )}
                         <p className="font-semibold">
                           ₹{Number(invoice.amount).toLocaleString()}
                         </p>

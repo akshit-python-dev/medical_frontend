@@ -34,10 +34,10 @@ export async function generatePrescriptionPDF(patient: any, prescriptions: any[]
     pdf.rect(15, yPosition - 5, pageWidth - 30, 40, 'F')
     
     pdf.setFontSize(12)
-    pdf.setFont(undefined, 'bold')
+    pdf.setFont('helvetica', 'bold')
     pdf.text('Patient Information', 20, yPosition)
     
-    pdf.setFont(undefined, 'normal')
+    pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(10)
     yPosition += 8
     pdf.text(`Name: ${patient.first_name} ${patient.last_name}`, 20, yPosition)
@@ -58,7 +58,7 @@ export async function generatePrescriptionPDF(patient: any, prescriptions: any[]
     
     pdf.setTextColor(255, 255, 255)
     pdf.setFontSize(12)
-    pdf.setFont(undefined, 'bold')
+    pdf.setFont('helvetica', 'bold')
     pdf.text('Prescribed Medications', 20, yPosition + 2)
     
     pdf.setTextColor(0, 0, 0)
@@ -69,34 +69,34 @@ export async function generatePrescriptionPDF(patient: any, prescriptions: any[]
       pdf.text('No medications prescribed', 20, yPosition)
     } else {
       prescriptions.forEach((prescription, index) => {
-        // Check if we need a new page
-        if (yPosition > pageHeight - 50) {
+        const medicineLines = pdf.splitTextToSize(
+          prescription.medication_name || 'No medicine details provided',
+          pageWidth - 40
+        )
+        const blockHeight = 12 + medicineLines.length * 5
+
+        if (yPosition > pageHeight - Math.max(50, blockHeight + 10)) {
           pdf.addPage()
           yPosition = 20
         }
 
-        // Medicine number and name
         pdf.setFontSize(11)
-        pdf.setFont(undefined, 'bold')
+        pdf.setFont('helvetica', 'bold')
         pdf.setFillColor(220, 220, 220)
-        pdf.rect(15, yPosition - 4, pageWidth - 30, 7, 'F')
-        pdf.text(`${index + 1}. ${prescription.medication_name}`, 20, yPosition)
-        
-        yPosition += 10
-        pdf.setFont(undefined, 'normal')
+        pdf.rect(15, yPosition - 4, pageWidth - 30, blockHeight, 'F')
+        pdf.text(`${index + 1}. Prescription`, 20, yPosition)
+
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(8.5)
+        pdf.text(
+          `Issued: ${new Date(prescription.created_at).toLocaleDateString('en-IN')}`,
+          pageWidth - 55,
+          yPosition
+        )
+
+        yPosition += 8
         pdf.setFontSize(10)
-
-        const details = [
-          `Dosage: ${prescription.dosage}`,
-          `Frequency: ${prescription.frequency || 'As needed'}`,
-          `Duration: ${prescription.duration || 'As directed'}`,
-        ]
-
-        if (prescription.instructions) {
-          details.push(`Instructions: ${prescription.instructions}`)
-        }
-
-        details.forEach((detail) => {
+        medicineLines.forEach((detail: string) => {
           pdf.text(detail, 20, yPosition)
           yPosition += 5
         })
@@ -116,6 +116,10 @@ export async function generatePrescriptionPDF(patient: any, prescriptions: any[]
       month: 'long',
       day: 'numeric',
     })
+    if (yPosition > pageHeight - 20) {
+      pdf.addPage()
+      yPosition = 20
+    }
     pdf.text(`Generated on: ${today}`, 20, yPosition)
     yPosition += 5
     pdf.text(`Patient ID: ${patient.id}`, 20, yPosition)

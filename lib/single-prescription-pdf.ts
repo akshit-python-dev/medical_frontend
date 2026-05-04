@@ -98,45 +98,34 @@ export async function generateSinglePrescriptionPDF(patient: any, prescription: 
   doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2])
   doc.setLineWidth(1)
   doc.setFillColor(240, 245, 255)
-  doc.rect(margin, yPosition, pageWidth - 2 * margin, 60, 'FD')
+  const medicineLines = doc.splitTextToSize(
+    prescription.medication_name || 'No medicine details provided',
+    pageWidth - 2 * margin - 10
+  )
+  const medicineBlockHeight = Math.max(60, 18 + medicineLines.length * 5)
+  doc.rect(margin, yPosition, pageWidth - 2 * margin, medicineBlockHeight, 'FD')
 
   doc.setTextColor(textColor[0], textColor[1], textColor[2])
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.text(prescription.medication_name, margin + 5, yPosition + 10)
+  doc.setFontSize(11)
+  doc.text('Medicines', margin + 5, yPosition + 8)
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
+  doc.setFontSize(10)
 
-  const medicineInfo = [
-    `Dosage: ${prescription.dosage}`,
-    `Frequency: ${prescription.frequency || 'As prescribed'}`,
-    `Duration: ${prescription.duration || 'As prescribed'}`,
-  ]
-
-  let medicineY = yPosition + 22
-  medicineInfo.forEach((info) => {
-    doc.text(info, margin + 5, medicineY)
-    medicineY += 6
+  let medicineY = yPosition + 16
+  medicineLines.forEach((line: string) => {
+    doc.text(line, margin + 5, medicineY)
+    medicineY += 5
   })
 
-  if (prescription.instructions) {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.text('Special Instructions:', margin + 5, medicineY)
-    medicineY += 5
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    const instructionLines = doc.splitTextToSize(prescription.instructions, pageWidth - 2 * margin - 10)
-    instructionLines.forEach((line: string) => {
-      doc.text(line, margin + 5, medicineY)
-      medicineY += 4
-    })
-  }
-
-  yPosition += 65
+  yPosition += medicineBlockHeight + 5
 
   // Important Notes Section
+  if (yPosition > pageHeight - 45) {
+    doc.addPage()
+    yPosition = margin
+  }
   doc.setDrawColor(200, 100, 100)
   doc.setLineWidth(0.5)
   doc.setFillColor(255, 240, 240)

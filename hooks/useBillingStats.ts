@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { apiClient } from '@/lib/api-client';
-import { Billing } from '@/lib/types';
+import { Billing, BillingStatus } from '@/lib/types';
 
 export interface BillingStats {
   total_revenue: string;
@@ -57,7 +57,7 @@ export function useBillingStats() {
     mutateSummary();
     mutateInvoices((prev) =>
       normalizeBilling(prev).map((invoice) =>
-        invoice.id === invoiceId ? { ...invoice, status: 'paid' } : invoice
+        invoice.id === invoiceId ? { ...invoice, status: BillingStatus.PAID } : invoice
       ),
       false
     );
@@ -67,6 +67,19 @@ export function useBillingStats() {
   const createInvoice = async (invoiceData: Partial<Billing> & { patient_id?: number }) => {
     const result = await apiClient.post('billing/', invoiceData);
     mutateInvoices((prev) => [...normalizeBilling(prev), result], false);
+    mutateSummary();
+    return result;
+  };
+
+  const updateInvoice = async (
+    invoiceId: number,
+    invoiceData: Partial<Billing> & { patient_id?: number }
+  ) => {
+    const result = await apiClient.patch(`billing/${invoiceId}/`, invoiceData);
+    mutateInvoices((prev) =>
+      normalizeBilling(prev).map((invoice) => (invoice.id === invoiceId ? result : invoice)),
+      false
+    );
     mutateSummary();
     return result;
   };
@@ -89,6 +102,7 @@ export function useBillingStats() {
       mutateInvoices();
     },
     createInvoice,
+    updateInvoice,
     markAsPaid,
     markPaid: markAsPaid,
   };

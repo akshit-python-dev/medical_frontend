@@ -40,8 +40,22 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     apiClient.clearToken()
-    mutate(null, false)
+    mutate(undefined, false)
   }, [mutate])
+
+  const updateProfile = useCallback(
+    async (profileData: Partial<DoctorUser>) => {
+      try {
+        const response = await apiClient.patch('auth/update_profile/', profileData)
+        mutate(response, false)
+        return response
+      } catch (err) {
+        console.error('[v0] Update profile error:', err)
+        throw err
+      }
+    },
+    [mutate]
+  )
 
   const register = useCallback(
     async (userData: {
@@ -77,6 +91,7 @@ export function useAuth() {
     login,
     logout,
     register,
+    updateProfile,
     isAuthenticated: !!user,
     hasToken,
   }
