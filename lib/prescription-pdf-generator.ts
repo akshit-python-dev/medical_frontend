@@ -40,6 +40,9 @@ export async function generatePrescriptionPDF(patient: any, prescriptions: any[]
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(10)
     yPosition += 8
+    const patientId = patient.patient_id || `PAT-${patient.id}`
+    pdf.text(`Patient ID: ${patientId}`, 20, yPosition)
+    yPosition += 6
     pdf.text(`Name: ${patient.first_name} ${patient.last_name}`, 20, yPosition)
     yPosition += 6
     pdf.text(`Father's Name: ${patient.father_name || 'N/A'}`, 20, yPosition)

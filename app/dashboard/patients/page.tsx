@@ -58,7 +58,8 @@ export default function PatientsPage() {
       patient.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.phone.includes(searchQuery)
+      patient.phone.includes(searchQuery) ||
+      (patient.patient_id && patient.patient_id.toUpperCase().includes(searchQuery.toUpperCase()))
   )
 
   const handleAddPatient = useCallback(async () => {
@@ -429,6 +430,7 @@ export default function PatientsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Patient ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
@@ -439,6 +441,9 @@ export default function PatientsPage() {
                 <TableBody>
                   {filteredPatients.map((patient) => (
                     <TableRow key={patient.id}>
+                      <TableCell className="font-medium text-blue-600">
+                        {patient.patient_id || `PAT-${patient.id}`}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {patient.first_name} {patient.last_name}
                       </TableCell>

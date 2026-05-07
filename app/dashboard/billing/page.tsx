@@ -32,7 +32,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useBillingStats } from '@/hooks/useBillingStats'
 import { usePatients } from '@/hooks/usePatients'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, IndianRupee, CheckCircle2, MoreHorizontal, AlertCircle, Loader, Trash2, Edit } from 'lucide-react'
+import { Plus, Search, IndianRupee, CheckCircle2, MoreHorizontal, AlertCircle, Loader, Trash2, Edit, Download } from 'lucide-react'
 import { Billing, BillingItem, BillingStatus } from '@/lib/types'
 
 function getTodayDate() {
@@ -40,7 +40,7 @@ function getTodayDate() {
 }
 
 export default function BillingPage() {
-  const { invoices, stats, isLoading, isError, error, createInvoice, updateInvoice, markPaid } = useBillingStats()
+  const { invoices, stats, isLoading, isError, error, createInvoice, updateInvoice, markPaid, deleteInvoice, downloadInvoice } = useBillingStats()
   const { patients } = usePatients()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
@@ -63,6 +63,10 @@ export default function BillingPage() {
   const [editInvoiceItems, setEditInvoiceItems] = useState<BillingItem[]>([
     { medicine_name: '', amount: '' },
   ])
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Billing | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const getPatientName = (patient: unknown, fallbackName?: string) => {
     if (fallbackName) return fallbackName
@@ -250,6 +254,50 @@ export default function BillingPage() {
       setIsSubmitting(false)
     }
   }, [editingInvoice, editInvoice, editInvoiceItems, toast, updateInvoice])
+
+  const handleDeleteInvoice = useCallback(async () => {
+    if (!invoiceToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await deleteInvoice(invoiceToDelete.id)
+      setIsDeleteDialogOpen(false)
+      setInvoiceToDelete(null)
+      toast({
+        title: 'Success',
+        description: 'Invoice deleted successfully',
+      })
+    } catch (err) {
+      console.error('[v0] Error deleting invoice:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete invoice',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [invoiceToDelete, deleteInvoice, toast])
+
+  const handleDownloadInvoice = useCallback(async (invoiceId: number) => {
+    setIsDownloading(true)
+    try {
+      await downloadInvoice(invoiceId)
+      toast({
+        title: 'Success',
+        description: 'Invoice downloaded successfully',
+      })
+    } catch (err) {
+      console.error('[v0] Error downloading invoice:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to download invoice',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [downloadInvoice, toast])
 
   if (isError) {
     return (
@@ -611,12 +659,26 @@ export default function BillingPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Invoice
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadInvoice(invoice.id)}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Invoice
+                            </DropdownMenuItem>
                             {invoice.status !== BillingStatus.PAID && (
                               <DropdownMenuItem onClick={() => handleMarkPaid(invoice.id)}>
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Mark as Paid
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => {
+                                setInvoiceToDelete(invoice)
+                                setIsDeleteDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Invoice
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -632,6 +694,32 @@ export default function BillingPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete invoice INV-{invoiceToDelete?.id}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
+              {isDeleting ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Invoice'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

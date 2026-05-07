@@ -84,6 +84,40 @@ export function useBillingStats() {
     return result;
   };
 
+  const deleteInvoice = async (invoiceId: number) => {
+    await apiClient.delete(`billing/${invoiceId}/`);
+    mutateInvoices((prev) =>
+      normalizeBilling(prev).filter((invoice) => invoice.id !== invoiceId),
+      false
+    );
+    mutateSummary();
+  };
+
+  const downloadInvoice = async (invoiceId: number) => {
+    try {
+      const invoice = invoices.find((inv) => inv.id === invoiceId);
+      if (!invoice) {
+        throw new Error('Invoice not found');
+      }
+
+      // Get patient data if available
+      let patient = null;
+      if (typeof invoice.patient === 'object' && invoice.patient !== null) {
+        patient = invoice.patient;
+      }
+
+      // Import and generate PDF on frontend using jsPDF
+      const { generateInvoicePDF } = await import('@/lib/invoice-pdf-generator');
+      generateInvoicePDF({
+        invoice,
+        patient,
+      });
+    } catch (error) {
+      console.error('[v0] Error downloading invoice:', error);
+      throw error;
+    }
+  };
+
   return {
     invoices,
     stats: summaryData ?? {
@@ -105,5 +139,7 @@ export function useBillingStats() {
     updateInvoice,
     markAsPaid,
     markPaid: markAsPaid,
+    deleteInvoice,
+    downloadInvoice,
   };
 }

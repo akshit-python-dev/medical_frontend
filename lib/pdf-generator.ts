@@ -2,6 +2,7 @@ import jsPDF from "jspdf"
 
 export interface PatientPDFData {
   id: number
+  patient_id?: string
   first_name: string
   last_name: string
   father_name: string
@@ -136,6 +137,8 @@ export const generatePatientPDF = async (
   yPosition = addSection("PATIENT INFORMATION", yPosition)
 
   const fullName = `${patient.first_name} ${patient.last_name}`
+  const patientId = patient.patient_id || `PAT-${patient.id}`
+  yPosition = addWrappedRow("Patient ID", patientId, yPosition)
   yPosition = addWrappedRow("Full Name", fullName, yPosition)
   yPosition = addWrappedRow("Father's Name", patient.father_name || "N/A", yPosition)
   yPosition = addWrappedRow(
@@ -145,7 +148,6 @@ export const generatePatientPDF = async (
   )
   yPosition = addWrappedRow("Date of Birth", patient.date_of_birth, yPosition)
   yPosition = addWrappedRow("Age", `${patient.age || "N/A"} years`, yPosition)
-  yPosition = addWrappedRow("Patient ID", `#${patient.id}`, yPosition)
   yPosition += 4
 
   // Contact Information

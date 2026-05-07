@@ -481,6 +481,14 @@ export default function PatientProfilePage({ params }: PatientProfilePageProps) 
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <User className="h-4 w-4" />
+                  <span className="text-sm">Patient ID</span>
+                </div>
+                <p className="font-medium text-blue-600">{patient.patient_id || `PAT-${patient.id}`}</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
                   <span className="text-sm">Full Name</span>
                 </div>
                 <p className="font-medium">{fullName}</p>

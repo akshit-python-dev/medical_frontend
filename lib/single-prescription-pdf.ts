@@ -66,8 +66,9 @@ export async function generateSinglePrescriptionPDF(patient: any, prescription: 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
 
+  const patientId = patient.patient_id || `PAT-${patient.id}`
   const patientDetails = [
-    [`Name: ${patient.first_name} ${patient.last_name}`, `Patient ID: ${patient.id}`],
+    [`Name: ${patient.first_name} ${patient.last_name}`, `Patient ID: ${patientId}`],
     [`Father's Name: ${patient.father_name || 'N/A'}`, `Age: ${patient.age || 'N/A'} years`],
     [`Phone: ${patient.phone || 'N/A'}`, `Gender: ${patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other'}`],
     [`Email: ${patient.email}`, ''],
