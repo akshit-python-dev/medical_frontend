@@ -27,7 +27,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
   const handleLogout = () => {
     logout()
-    router.replace("/")
+    router.replace("/login")
   }
   
   return (

@@ -20,7 +20,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     if (!isLoading && !hasToken) {
-      router.replace("/")
+      router.replace("/login")
     }
   }, [isLoading, hasToken, router])
   
