@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono, Archivo, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { ThemeProvider } from '@/lib/theme-context'
@@ -7,10 +7,12 @@ import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo" });
+const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: 'E Bio Cares - Doctor CRM',
-  description: 'Professional Patient Management Dashboard for Healthcare',
+  title: 'E Bio Cares - Healthcare Management',
+  description: 'Professional Patient Management Dashboard and Hospital Website for Healthcare',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -37,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" className={`bg-background ${_archivo.variable} ${_inter.variable}`}>
       <body className="font-sans antialiased">
         <ThemeProvider>
           <AuthProvider>

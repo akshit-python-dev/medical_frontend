@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stethoscope, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import Image from "next/image"
 
@@ -18,7 +18,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
-  // useEffect(() => {
   const { isAuthenticated, isLoading } = useAuth()
 
   useEffect(() => {
@@ -26,7 +25,6 @@ export default function LoginPage() {
       router.replace("/dashboard")
     }
   }, [isAuthenticated, isLoading])
-  // }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
