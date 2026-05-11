@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 30% 96%;
+    --foreground: 30 10% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 10% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 10% 15%;
+    --primary: 30 55% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 30% 35%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 30 20% 90%;
+    --muted-foreground: 30 10% 40%;
+    --accent: 0 50% 30%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 20% 85%;
+    --input: 30 20% 85%;
+    --ring: 30 55% 55%;
+    --radius: 0.5rem;
+    --chart-1: 30 55% 55%;
+    --chart-2: 150 30% 35%;
+    --chart-3: 0 50% 30%;
+    --chart-4: 30 30% 70%;
+    --chart-5: 150 20% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom styles from original theme */
+.font-archivo {
+  font-family: var(--font-archivo), sans-serif;
+}
+
+.font-inter {
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Blinking animation for appointment button */
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.blinking {
+  animation: blink 1s infinite;
+}
+
+/* Custom button styles */
+.ayur-btn {
+  @apply inline-block px-6 py-3 bg-[#CD8973] text-white font-semibold rounded-md transition-all duration-300 hover:bg-[#b5745f];
+}
+
+/* Section backgrounds */
+.ayur-bgcover {
+  @apply relative overflow-hidden;
+}
+
+/* Banner gradient background */
+.banner-gradient {
+  background: linear-gradient(135deg, #2d5a27 0%, #1a3518 50%, #0f1f0d 100%);
+}
+
+/* Card hover effects */
+.ayur-card {
+  @apply bg-white rounded-lg shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+}
+
+/* Form input styles */
+.ayur-form-input input,
+.ayur-form-input textarea {
+  @apply w-full px-4 py-3 bg-[#f6f1ed] border border-transparent rounded-md focus:outline-none focus:border-[#CD8973] transition-colors;
+}
+
+/* Achievement box styles */
+.ayur-achieve-box {
+  @apply flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm;
+}
+
+/* Why choose box styles */
+.ayur-why-box {
+  @apply flex items-start gap-4 mb-6;
+}
+
+/* Footer styles */
+.ayur-footer-link {
+  @apply text-[#E4D4CF] hover:text-white transition-colors;
+}
+
+/* Swiper customization */
+.swiper-button-prev,
+.swiper-button-next {
+  @apply w-12 h-12 rounded-full bg-[#CD8973] flex items-center justify-center;
+}
+
+.swiper-button-prev::after,
+.swiper-button-next::after {
+  display: none;
+}
+
+/* Breadcrumb styles */
+.breadcrumb-bg {
+  background: linear-gradient(135deg, #2d5a27 0%, #1a3518 100%);
+}
+
+/* Treatment card styles */
+.treatment-card {
+  @apply bg-white rounded-lg overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl;
+}
+
+.treatment-card img {
+  @apply w-full h-48 object-cover;
+}
+
+/* Social link styles */
+.social-link {
+  @apply w-10 h-10 rounded-full bg-[#CD8973] flex items-center justify-center text-[#E4D4CF] hover:bg-[#b5745f] transition-colors;
+}
+
+/* Background shapes */
+.bg-shape {
+  @apply absolute pointer-events-none opacity-30;
+}
+
+/* Responsive container */
+.container-custom {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
