@@ -326,7 +326,7 @@ p{
   font-size: 16px;
   font-weight: 400;
   font-family: "Inter", sans-serif;
-  color: var(--ayur-banheading-color);
+  color: var(--ayur-banheading-color) !important;
 }
 .ayur-nav-menu ul li a::before, .ayur-nav-menu ul li.active a:before{
   position: absolute;
@@ -389,7 +389,7 @@ li.ayur-has-menu a svg{
   fill:var(--ayur-primary-color)
 }
 .ayur-nav-menu ul li a:hover, .ayur-nav-menu ul li.active a{
-  color: var(--ayur-primary-color);
+  color: var(--ayur-primary-color) !important;
 }
 .ayur-nav-menu ul li a:hover::before, .ayur-nav-menu ul li.active a:before{
   opacity: 1;
@@ -1012,7 +1012,7 @@ a.likeproduct img.like{
   box-shadow: 3px 4px 29.6px 0px #0000000F;
   transform: translateY(-5px);
 }
-.ayur-why-boxicon{
+/* .ayur-why-boxicon{
   width: 65px;
   height: 65px;
   display: flex;
@@ -1024,6 +1024,20 @@ a.likeproduct img.like{
   text-align: center;
   margin: 0 auto 10px;
   transition: all .3s linear;
+} */
+
+.ayur-why-boxicon {
+  width: 65px;
+  height: 65px;
+  min-width: 65px;
+  min-height: 65px;
+  flex: 0 0 65px;
+  border-radius: 50%;
+  background-color: var(--ayur-primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 .ayur-why-boxtext h4{
   font-size: 18px;

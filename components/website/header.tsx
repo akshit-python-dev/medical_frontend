@@ -39,7 +39,45 @@ export default function Header() {
           color: #fdfefe;
           animation: blink 1s infinite;
         }
-      `}</style>
+
+        
+  .ayur-mobile-nav {
+    background: white;
+    width: 100%;
+    padding: 15px;
+    border-radius: 8px;
+  }
+
+  .ayur-mobile-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .ayur-mobile-nav li {
+    width: 100%;
+  }
+
+  .ayur-mobile-nav a {
+    display: block;
+    width: 100%;
+    color: black !important;
+    text-decoration: none;
+    padding: 12px 0;
+    font-size: 16px;
+  }
+
+  .ayur-mobile-nav button {
+    color: black !important;
+  }
+
+  @media (min-width: 992px) {
+    .ayur-mobile-nav {
+      display: none;
+    }
+  }
+`}
+      </style>
 
       <div className="ayur-menu-wrapper">
         <div className="container">
@@ -68,11 +106,11 @@ export default function Header() {
                     {navItems.map((item) => (
                       <li
                         key={item.name}
-                        className={item.submenu ? "ayur-has-menu" : item.highlight ? "blinking-item" : ""}
+                        className={item.submenu ? "ayur-has-menu text-black" : item.highlight ? "blinking-item" : ""}
                       >
                         {item.submenu ? (
                           <>
-                            <a href="javascript:void(0)">
+                            <a onClick={(e) => e.preventDefault()}>
                               {item.name}
                               <svg
                                 version="1.1"
@@ -128,7 +166,7 @@ export default function Header() {
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <div className="ayur-mobile-nav" style={{ marginTop: "10px", paddingBottom: "15px" }}>
+            <div className="ayur-mobile-nav">
               <ul>
                 {navItems.map((item) => (
                   <li key={item.name}>
@@ -143,7 +181,7 @@ export default function Header() {
                             textAlign: "left",
                             background: "none",
                             border: "none",
-                            color: "white",
+                            color: "black",
                             padding: "12px 0",
                             cursor: "pointer",
                             fontSize: "16px",
@@ -168,7 +206,7 @@ export default function Header() {
                               <li key={subItem.name} style={{ padding: "8px 0" }}>
                                 <Link
                                   href={subItem.href}
-                                  style={{ color: "rgba(255,255,255,0.8)" }}
+                                  style={{ color: "#000" }}
                                   onClick={() => setMobileMenuOpen(false)}
                                 >
                                   {subItem.name}

@@ -123,6 +123,8 @@
 /* Breadcrumb styles */
 .breadcrumb-bg {
   background: linear-gradient(135deg, #2d5a27 0%, #1a3518 100%);
+  height: 183px;
+  padding-top: 75px;
 }
 
 /* Treatment card styles */

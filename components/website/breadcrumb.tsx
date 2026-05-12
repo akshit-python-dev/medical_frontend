@@ -9,11 +9,11 @@ export default function Breadcrumb({ title, currentPage }: BreadcrumbProps) {
   return (
     <section className="breadcrumb-bg py-16 md:py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-black/30" />
-      <div className="container-custom relative z-10">
+      <div className="container-custom relative ">
         <div className="text-center text-white">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">{title}</h2>
           <div className="flex items-center justify-center gap-2 text-lg">
-            <Link href="/" className="hover:text-[#CD8973] transition-colors">
+            <Link href="/" style={{ color: "#CD8973" }}>
               Home
             </Link>
             <span>/</span>

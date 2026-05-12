@@ -163,7 +163,10 @@ export default function Footer() {
                       height={24}
                     />
                     <p>
-                      <a href="mailto:info@ebiocares.com">info@ebiocares.com</a>
+                    <a href="mailto:info@ebiocares.com" className="text-white">
+  info@ebiocares.com
+</a>
+                    
                     </p>
                   </li>
                 </ul>
