@@ -54,7 +54,7 @@ const EBioCares = () => {
                   effect="coverflow"
                   grabCursor={true}
                   centeredSlides={true}
-                  slidesPerView={'auto'}
+                  slidesPerView={1}
                   coverflowEffect={{
                     rotate: 0,
                     stretch: 0,
@@ -62,23 +62,46 @@ const EBioCares = () => {
                     modifier: 2.5,
                     slideShadows: false,
                   }}
+                  // breakpoints={{
+                  //   320: {
+                  //     spaceBetween: -30,
+                  //     coverflowEffect: {
+                  //       depth: 60,
+                  //       modifier: 1.5,
+                  //     },
+                  //   },
+                  //   768: {
+                  //     spaceBetween: -50,
+                  //     coverflowEffect: {
+                  //       depth: 80,
+                  //       modifier: 2,
+                  //     },
+                  //   },
+                  //   1024: {
+                  //     spaceBetween: -80,
+                  //     coverflowEffect: {
+                  //       depth: 100,
+                  //       modifier: 2.5,
+                  //     },
+                  //   },
+                  // }}
                   breakpoints={{
                     320: {
-                      spaceBetween: -30,
+                      spaceBetween: 10,
                       coverflowEffect: {
                         depth: 60,
                         modifier: 1.5,
                       },
                     },
                     768: {
-                      spaceBetween: -50,
+                      spaceBetween: 20,
                       coverflowEffect: {
                         depth: 80,
                         modifier: 2,
                       },
                     },
                     1024: {
-                      spaceBetween: -80,
+                      spaceBetween: 30,
                       coverflowEffect: {
                         depth: 100,
                         modifier: 2.5,

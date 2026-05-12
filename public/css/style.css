@@ -577,30 +577,30 @@ li.ayur-has-menu a svg{
   display: block;
   width: 100%;
 }
-.ayur-banner-slider .swiper-slide.swiper-slide-visible.swiper-slide-prev .ayur-ban-slide, .ayur-banner-slider .swiper-slide .ayur-ban-slide {
-  transform: scale(0.5);
-}
-.ayur-banner-slider .swiper-slide.swiper-slide-visible.swiper-slide-next .ayur-ban-slide {
-  transform: scale(0.6);
-}
 .ayur-banner-slider .swiper-slide.swiper-slide-visible.swiper-slide-fully-visible.swiper-slide-active{
   overflow: inherit;
   top: 0;
 }
-.ayur-banner-slider .swiper-slide.swiper-slide-visible.swiper-slide-fully-visible.swiper-slide-active .ayur-ban-slide{
-  transform: scale(1.1);
+.ayur-banner-slider .swiper-slide {
+  display: flex;
+  justify-content: center;
+  /* width: 320px !important; */
+  width: clamp(240px, 30vw, 360px);
+  
+  align-items: center;
 }
-.ayur-banner-slider .swiper-slide{
-  top: 40px;
+.ayur-ban-slide {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
-.swiper-slide.swiper-slide-visible.swiper-slide-prev {
-  left: -72px;
-}
-.swiper-slide.swiper-slide-visible.swiper-slide-next{
-  right: -30px;
-}
+
 .ayur-ban-slide img {
+  width: 80%;        /* key fix */
+  max-width: 200px;  /* prevents huge images */
+  height: 200px;     /* control height */
   object-fit: cover;
+  border-radius: 20px;
 }
 .ayur-ban-leaf img{
   position: absolute;
